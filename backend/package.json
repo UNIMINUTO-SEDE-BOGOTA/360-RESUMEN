@@ -1,0 +1,25 @@
+{
+  "name": "azure-sql-backend",
+  "version": "1.0.0",
+  "description": "Backend API para conectar a Azure SQL Database NUEVA_APP",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "azure",
+    "sql",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.2",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "mssql": "^10.0.4"
+  }
+}
