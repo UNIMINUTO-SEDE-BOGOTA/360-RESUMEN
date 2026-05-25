@@ -487,7 +487,7 @@ facTree.forEach(({ parent }) => {
       </div>
 
 {/* ROW 2 — MODALIDAD + AUSENTISMO + VIRTUALES */}
-<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, minHeight: 0 }}>
+<div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 8, minHeight: 0 }}>
 
   <Panel title="Estudiantes por Modalidad">
     <TableScroll>
@@ -555,7 +555,8 @@ facTree.forEach(({ parent }) => {
       
 
       {/* ROW 3 — CENTROS + FACULTADES */}
-<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, minHeight: 0 }}>
+<div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 8, minHeight: 0 }}>
+
 
         <Panel title="Estudiantes por Centro Universitario y Modalidad">
           <TableScroll>
