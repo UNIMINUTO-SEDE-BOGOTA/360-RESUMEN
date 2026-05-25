@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList
 } from "recharts";
+import { DropdownMulti } from "./FiltersMulti";
 
 
 const API_URL =
@@ -240,60 +241,82 @@ export default function ColaboradoresView() {
   // ─────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────
-  return (
-    <div className="flex flex-col md:flex-row h-full gap-3">
+return (
+  <div className="flex flex-col h-full gap-3">
 
-      {/* SIDEBAR */}
-      <aside className="w-full md:w-56 bg-white border rounded-lg p-3 md:p-4 shrink-0">
-        <CheckGroup
+    {/* TÍTULO */}
+    <div className="bg-slate-700 text-white text-center rounded-lg py-3">
+      <div className="text-sm font-bold">
+        SEDE UNIMINUTO BOGOTÁ – COLABORADORES
+      </div>
+      <div className="text-xs text-slate-300">2026-1</div>
+    </div>
+
+    {/* KPI */}
+    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center">
+      <div className="text-[10px] text-blue-500 font-semibold uppercase">
+        Colaboradores Totales
+      </div>
+      <div className="text-3xl font-bold text-blue-700">
+        {loading ? "…" : totalColaboradores.toLocaleString("es-CO")}
+      </div>
+    </div>
+
+    {/* FILTROS */}
+    <div className="bg-white border-b px-2 py-1">
+      <div className="flex flex-wrap gap-2 items-end [&>*]:flex-1 [&>*]:min-w-[130px]">
+        <DropdownMulti
           label="Modalidad"
-          options={["1.Presencial", "2.Distancia", "Sin información"]}
+          options={[
+            { label: "1.Presencial", value: "1.Presencial" },
+            { label: "2.Distancia", value: "2.Distancia" },
+            { label: "Sin información", value: "Sin información" },
+          ]}
           selected={selModalidad}
           onChange={setSelModalidad}
         />
-        <CheckGroup
+        <DropdownMulti
           label="Género"
-          options={["Femenino", "Masculino"]}
+          options={[
+            { label: "Femenino", value: "Femenino" },
+            { label: "Masculino", value: "Masculino" },
+          ]}
           selected={selGenero}
           onChange={setSelGenero}
         />
-        <CheckGroup
+        <DropdownMulti
           label="Tipo"
-          options={["Profesores","Gestión Académica","Gestión Administrativa","Proyectos"]}
+          options={[
+            { label: "Profesores", value: "Profesores" },
+            { label: "Gestión Académica", value: "Gestión Académica" },
+            { label: "Gestión Administrativa", value: "Gestión Administrativa" },
+            { label: "Proyectos", value: "Proyectos" },
+          ]}
           selected={selTipo}
           onChange={setSelTipo}
         />
-      </aside>
+        <button
+          onClick={() => { setSelModalidad([]); setSelGenero([]); setSelTipo(["Profesores"]); }}
+          className="h-[30px] px-2 border rounded-md text-[11px] text-red-600 hover:bg-red-50 flex items-center justify-center gap-1 flex-1"
+        >
+          <span className="flex items-center gap-1">
+            🗑 Limpiar
+          </span>
+        </button>
+      </div>
+    </div>
 
-      {/* CONTENIDO */}
-      <div className="flex-1 flex flex-col gap-3">
+    {/* CONTENIDO */}
+    <div className="flex flex-col gap-3">
 
-        {/* KPI */}
-        <div className="grid grid-cols-1 md:grid-cols-[220px_1fr_180px] gap-3">          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center">
-            <div className="text-[10px] text-blue-500 font-semibold uppercase">
-              Colaboradores Totales
-            </div>
-            <div className="text-3xl font-bold text-blue-700">
-              {loading ? "…" : totalColaboradores.toLocaleString("es-CO")}
-            </div>
+      {/* NIVEL + DEDICACIÓN */}
+      <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-3">
+        {/* NIVEL */}
+        <div className="bg-white border rounded-xl overflow-x-auto">
+          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
+            Nivel de Formación
           </div>
-
-          <div className="flex-1 bg-slate-700 text-white text-center rounded-lg py-3">
-            <div className="text-sm font-bold">
-              SEDE UNIMINUTO BOGOTÁ – COLABORADORES
-            </div>
-            <div className="text-xs text-slate-300">2026-1</div>
-          </div>
-        </div>
-
-        {/* NIVEL + DEDICACIÓN */}
-        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-3">
-          {/* NIVEL */}
-          <div className="bg-white border rounded-xl overflow-x-auto">
-            <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-              Nivel de Formación
-            </div>
-            <div className="min-w-[420px]">
+          <div className="min-w-[420px]">
             <table className="text-xs w-full">
               <thead className="bg-slate-50">
                 <tr>
@@ -315,14 +338,14 @@ export default function ColaboradoresView() {
               </tbody>
             </table>
           </div>
-          </div>
+        </div>
 
-          {/* DEDICACIÓN */}
-<div className="bg-white border rounded-xl overflow-hidden">
-  <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-    Colaboradores por dedicación
-  </div>
-  <div className="p-2 h-52">
+        {/* DEDICACIÓN */}
+        <div className="bg-white border rounded-xl overflow-hidden">
+          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
+            Colaboradores por dedicación
+          </div>
+          <div className="p-2 h-52">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dedicacionData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -339,78 +362,43 @@ export default function ColaboradoresView() {
             </ResponsiveContainer>
           </div>
         </div>
-        </div>
+      </div>
 
+      {/* ESCALAFÓN + CONTRATO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-
-        {/* ESCALAFÓN + CONTRATO */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-
-
-          {/* ESCALAFÓN */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-  <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-    Escalafón docente
-  </div>
-  <div className="p-2 h-56">
-
+        {/* ESCALAFÓN */}
+        <div className="bg-white border rounded-xl overflow-hidden">
+          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
+            Escalafón docente
+          </div>
+          <div className="p-2 h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                  data={escalafonData}
-                  margin={{ top: 35, right: 10, left: 0, bottom: 20 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  
-                  
-                  <XAxis
-                    dataKey="name"
-                    angle={-30}
-                    textAnchor="end"
-                    height={60}
-                    interval={0}   // 👈 CLAVE: muestra todos
-                  />
-
-
-                  <YAxis />
-
-                  <Tooltip />
-
-                  <Bar dataKey="valor">
-                    {escalafonData.map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={ESCALAFON_COLORS[i % ESCALAFON_COLORS.length]}
-                      />
-                    ))}
-
-                    {/* 👇 separación del número */}
-                    <LabelList
-                      dataKey="valor"
-                      position="top"
-                      offset={10}
-                    />
-
-                  </Bar>
-                </BarChart>
-
+              <BarChart data={escalafonData} margin={{ top: 35, right: 10, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis dataKey="name" angle={-30} textAnchor="end" height={60} interval={0} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="valor">
+                  {escalafonData.map((_, i) => (
+                    <Cell key={i} fill={ESCALAFON_COLORS[i % ESCALAFON_COLORS.length]} />
+                  ))}
+                  <LabelList dataKey="valor" position="top" offset={10} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
-          </div>
+        </div>
 
-          {/* CONTRATO */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-  <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-    Tipo de contrato
-  </div>
-  <div className="p-2 h-56">
+        {/* CONTRATO */}
+        <div className="bg-white border rounded-xl overflow-hidden">
+          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
+            Tipo de contrato
+          </div>
+          <div className="p-2 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={contratoData}
-                  dataKey="value"
-                  outerRadius={75}
-                  label={({ pct }) => pct}
-                >
+                <Pie data={contratoData} dataKey="value" outerRadius={75} label={({ pct }) => pct}>
                   {contratoData.map((_, i) => (
                     <Cell key={i} fill={CONTRATO_COLORS[i % CONTRATO_COLORS.length]} />
                   ))}
@@ -420,10 +408,10 @@ export default function ColaboradoresView() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          </div>
-
         </div>
+
       </div>
     </div>
-  );
+  </div>
+);
 }
