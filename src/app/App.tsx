@@ -798,10 +798,8 @@ console.log("All rows:", escuelaRows);
   // ==================== RENDER ====================
 
   return (
-    <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
-
-      {/* HEADER */}
-      <header className="bg-white border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+<div className="min-h-screen bg-gray-100 flex flex-col">
+  <header className="bg-white border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-50 md:static">
 
         {/* LOGO */}
         <div className="flex items-center gap-3 min-w-0">
@@ -878,7 +876,7 @@ console.log("All rows:", escuelaRows);
       </div>
 
       {/* MAIN */}
-      <main className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+        <main className="flex-1 px-3 py-3 overflow-y-auto">
         <div className="max-w-7xl mx-auto flex-1 min-h-0 flex flex-col gap-2">
 
           {/* STATUS */}
