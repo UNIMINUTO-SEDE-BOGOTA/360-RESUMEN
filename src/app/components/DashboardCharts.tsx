@@ -470,7 +470,7 @@ facTree.forEach(({ parent }) => {
   // ── RENDER ────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: "grid", gridTemplateRows: "auto auto 1fr", gap: 8, height: "auto" }}>
+    <div className="flex flex-col" style={{ gap: 8 }}>
 
       {/* ROW 1 — KPI + FILTROS */}
 <div className="grid grid-cols-1 md:grid-cols-[120px_1fr]" style={{ gap: 8 }}>        <Panel title="Estudiantes Totales">
