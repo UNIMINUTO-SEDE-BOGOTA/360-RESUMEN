@@ -9,6 +9,13 @@ import {
 } from "lucide-react";
 
 export function BackendSetupGuide() {
+
+  const API_URL =
+  (typeof import.meta !== "undefined" &&
+    (import.meta as any).env &&
+    (import.meta as any).env.VITE_API_URL) ||
+  "https://three60-resumen-backend.onrender.com";
+  
   const [copied, setCopied] = useState<string | null>(null);
   const [status, setStatus] = useState<
     "checking" | "connected" | "disconnected"
@@ -26,12 +33,12 @@ export function BackendSetupGuide() {
   const check = async () => {
     setStatus("checking");
     try {
-      const res = await fetch("http://localhost:3001/api/health");
+      const res = await fetch(`${API_URL}/api/health`);
       if (!res.ok) throw new Error();
 
       setStatus("connected");
 
-      const t = await fetch("http://localhost:3001/api/tablas");
+      const t = await fetch(`${API_URL}/api/tablas`);
       const json = await t.json();
       setTables(json.map((x: any) => x.TABLE_NAME));
     } catch {
@@ -120,18 +127,18 @@ export function BackendSetupGuide() {
             <div>
               <span className="text-gray-500">Server:</span>
               <div className="font-mono text-[11px]">
-                admindpla.database.windows.net
+                eco360.database.windows.net
               </div>
             </div>
 
             <div>
               <span className="text-gray-500">DB:</span>
-              <div className="font-mono">NUEVA_APP</div>
+              <div className="font-mono">BD-01</div>
             </div>
 
             <div>
               <span className="text-gray-500">User:</span>
-              <div className="font-mono">admindpla2</div>
+              <div className="font-mono">CloudSA663fff41</div>
             </div>
           </div>
         </div>
@@ -151,9 +158,9 @@ export function BackendSetupGuide() {
 
           <Code
             id="env"
-            code={`AZURE_SQL_SERVER=admindpla.database.windows.net
-AZURE_SQL_DATABASE=NUEVA_APP
-AZURE_SQL_USER=admindpla2
+            code={`AZURE_SQL_SERVER=eco360.database.windows.net
+AZURE_SQL_DATABASE=BD-01
+AZURE_SQL_USER=CloudSA663fff41
 AZURE_SQL_PASSWORD=********
 PORT=3001`}
           />
@@ -164,7 +171,7 @@ PORT=3001`}
           <h3 className="font-semibold text-gray-700">Endpoints</h3>
 
           <a
-            href="http://localhost:3001/api/health"
+            href={`${API_URL}/api/health`}
             target="_blank"
             className="flex items-center gap-1 text-blue-600"
           >
@@ -173,7 +180,7 @@ PORT=3001`}
           </a>
 
           <a
-            href="http://localhost:3001/api/tablas"
+            href={`${API_URL}/api/tablas`}
             target="_blank"
             className="flex items-center gap-1 text-blue-600"
           >
