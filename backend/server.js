@@ -601,6 +601,7 @@ if (isPausedDbError(err)) return sendPaused(res);
 
 res.status(500).json({ error: getErrorMessage(err) });
 }
+});
 
 // Ejecutar SELECT custom
 app.post('/api/query', async (req, res) => {
