@@ -5,8 +5,11 @@ import {
   ResponsiveContainer, Cell, LabelList,
 } from "recharts";
 
+
 const API_URL =
-  (import.meta as any).env?.VITE_API_URL || "http://localhost:3001";
+  (import.meta as any).env?.VITE_API_URL ||
+  "https://three60-resumen-backend.onrender.com";
+
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Programa {
