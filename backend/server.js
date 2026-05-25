@@ -527,6 +527,15 @@ app.get('/api/datos/:tabla', async (req, res) => {
     }
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const cacheKey = `datos_${realTableName}_${JSON.stringify(req.query)}`;
+    
+    // ✅ intentar usar cache antes de consultar BD
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log("🟢 Cache usado (/api/datos)");
+      return res.json(cached);
+    }
+
 
     const dataSql  = `
           SELECT
@@ -551,23 +560,47 @@ app.get('/api/datos/:tabla', async (req, res) => {
     const countSql = `SELECT COUNT(*) AS total FROM [${realTableName}] ${whereSql}`;
 
     const [dataR, countR] = await Promise.all([
+      
       reqData.query(dataSql),
       reqCount.query(countSql),
     ]);
 
-    res.json({
+
+    const response = {
       page,
       pageSize,
       total: countR.recordset[0]?.total || 0,
-      rows:  dataR.recordset,
-    });
+      rows: dataR.recordset,
+    };
+    
+    // ✅ guardar cache
+    setCache(cacheKey, response);
+    
+    res.json(response);
+
 
   } catch (err) {
-    console.error('❌ Error /api/datos:', err);
-    if (isPausedDbError(err)) return sendPaused(res);
-    res.status(500).json({ error: getErrorMessage(err) });
-  }
-});
+
+console.error('❌ Error /api/datos:', err);
+
+// ✅ usar tabla segura (fallback)
+const tableSafe = typeof realTableName !== "undefined"
+  ? realTableName
+  : req.params.tabla;
+
+const cacheKey = `datos_${tableSafe}_${JSON.stringify(req.query)}`;
+const cached = getCache(cacheKey);
+
+if (cached) {
+  console.log("🟡 BD caída → usando cache");
+  return res.json(cached);
+}
+
+// ✅ si es paused Azure
+if (isPausedDbError(err)) return sendPaused(res);
+
+res.status(500).json({ error: getErrorMessage(err) });
+}
 
 // Ejecutar SELECT custom
 app.post('/api/query', async (req, res) => {
