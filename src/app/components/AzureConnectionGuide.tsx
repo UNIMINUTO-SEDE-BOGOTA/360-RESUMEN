@@ -102,9 +102,11 @@ GET /api/datos/agregados`}
             Frontend
           </h3>
 
-          <CodeBlock
-            code={`fetch('http://localhost:3001/api/datos')`}
-          />
+
+        <CodeBlock
+          code={`fetch('https://three60-resumen-backend.onrender.com/api/datos/Poblacion_Estudiantil')`}
+        />
+
         </div>
 
         {/* CONNECTION STRING */}
