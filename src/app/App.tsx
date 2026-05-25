@@ -798,8 +798,9 @@ console.log("All rows:", escuelaRows);
   // ==================== RENDER ====================
 
   return (
-<div className="min-h-screen bg-gray-100 flex flex-col">
-  <header className="bg-white border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-50 md:static">
+// DESPUÉS — envueltos juntos en sticky
+<div className="sticky top-0 z-50 md:static">
+  <header className="bg-white border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3">
 
         {/* LOGO */}
         <div className="flex items-center gap-3 min-w-0">
@@ -855,7 +856,7 @@ console.log("All rows:", escuelaRows);
       </header>
 
       {/* MARQUEE */}
-      <div className="bg-slate-900 text-white text-xs overflow-hidden border-y">
+  <div className="bg-slate-900 text-white text-xs overflow-hidden border-y">
         <div className="overflow-hidden">
           <div
             className="flex whitespace-nowrap"
