@@ -58,7 +58,7 @@ export interface FiltersMultiProps {
 
 
 /** Botón dropdown con multiselección, buscador, seleccionar todos/limpiar, aplicar */
-function DropdownMulti({
+export function DropdownMulti({
   label,
   options,
   selected,
