@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList,
 } from "recharts";
-
+import { DropdownMulti } from "./FiltersMulti";
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ||
@@ -217,186 +217,153 @@ export function OfertaView({ fechaCorte = "20 de febrero de 2026" }: Props) {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
+return (
+  <div className="flex flex-col gap-2 h-full min-h-0 overflow-y-auto">
 
-      {/* ══ HEADER ══ */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 bg-[#2d3748] text-white text-center rounded py-2.5">
-          <span className="text-[13px] font-bold tracking-wide">
-            SEDE UNIMINUTO BOGOTÁ / OFERTA ACADÉMICA
-          </span>
-        </div>
-      </div>
-
-      {/* ══ ERROR ══ */}
-      {error && (
-        <div className="bg-red-50 border border-red-300 text-red-700 rounded px-3 py-2 text-[12px]">
-          ⚠️ No se pudo cargar la oferta: {error}
-        </div>
-      )}
-
-      {/* ══ CUERPO ══ */}
-      {loading ? (
-        <Spinner />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3 items-start flex-1">
-
-          {/* ── GRÁFICA + FILTROS FLOTANTES ── */}
-          <div className="relative border border-slate-300 rounded overflow-hidden bg-white">
-            <div className="bg-[#4a5568] text-white text-center text-[11px] font-bold py-1.5">
-              Programas por Nivel Académico y Categorización
-            </div>
-
-            <div className="relative" style={{ minHeight: 380 }}>
-
-              {/* FILTROS flotantes */}
-              <div className="hidden md:flex absolute top-3 left-3 z-10 flex-col gap-2 w-[148px]">
-                {opcionesPer.length > 0 && (
-                  <CheckGroup
-                    label="Periodicidad"
-                    options={opcionesPer}
-                    selected={selPer}
-                    onChange={setSelPer}
-                  />
-                )}
-                {opcionesMod.length > 0 && (
-                  <CheckGroup
-                    label="Modalidad"
-                    options={opcionesMod}
-                    selected={selMod}
-                    onChange={setSelMod}
-                  />
-                )}
-                {opcionesNiv.length > 0 && (
-                  <CheckGroup
-                    label="Nivel Académico"
-                    options={opcionesNiv}
-                    selected={selNiv}
-                    onChange={setSelNiv}
-                  />
-                )}
-              </div>
-{/* FILTROS EN MÓVIL */}
-<div className="flex md:hidden flex-col gap-2 p-3">
-  {opcionesPer.length > 0 && (
-    <CheckGroup
-      label="Periodicidad"
-      options={opcionesPer}
-      selected={selPer}
-      onChange={setSelPer}
-    />
-  )}
-  {opcionesMod.length > 0 && (
-    <CheckGroup
-      label="Modalidad"
-      options={opcionesMod}
-      selected={selMod}
-      onChange={setSelMod}
-    />
-  )}
-  {opcionesNiv.length > 0 && (
-    <CheckGroup
-      label="Nivel Académico"
-      options={opcionesNiv}
-      selected={selNiv}
-      onChange={setSelNiv}
-    />
-  )}
-</div>
-              {/* GRÁFICA */}
-              <div className="md:pl-[168px] pl-2 pr-4 pt-4 pb-2" style={{ height: 380 }}>
-                {barras.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-slate-400 text-[12px]">
-                    Sin resultados para los filtros seleccionados
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={barras}
-                      margin={{ top: 40, right: 10, left: 10, bottom: 80 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                      <XAxis
-                        dataKey="nombre"
-                        tick={{ fontSize: 10 }}
-                        interval={0}
-                        angle={-35}
-                        textAnchor="end"
-                        height={90}
-                      />
-                      <YAxis hide domain={[0, 'dataMax + 8']} />
-                      <Tooltip formatter={(v: any) => [v, "Programas"]} />
-                      <Bar dataKey="valor" radius={[2, 2, 0, 0]} maxBarSize={80}>
-                        {barras.map((e, i) => (
-                          <Cell key={i} fill={e.color} />
-                        ))}
-                        <LabelList
-                          dataKey="valor"
-                          position="top"
-                          style={{ fontSize: 11, fontWeight: "bold", fill: "#374151" }}
-                          offset={6}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ── TABLA NIVEL / MODALIDAD ── */}
-          <div className="border border-slate-300 rounded overflow-hidden bg-white">
-            <div className="bg-[#4a5568] text-white text-center text-[11px] font-bold py-1.5">
-              Programas por Nivel Académico y Modalidad
-            </div>
-            <table className="w-full border-collapse text-[11px]">
-              <thead>
-                <tr className="bg-[#dce3ea]">
-                  <th className="px-2 py-1 text-left font-bold text-slate-700 border-b border-slate-400">Nivel</th>
-                  <th className="px-2 py-1 text-right font-bold text-slate-700 border-b border-slate-400">SNIES</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tabla.map((g) => (
-                  <>
-                    <tr
-                      key={`g-${g.nivel}`}
-                      className="bg-[#eaeff4] border-t border-slate-200 cursor-pointer hover:bg-[#d8e1ea]"
-                      onClick={() => setExp(p => ({ ...p, [g.nivel]: !p[g.nivel] }))}
-                    >
-                      <td className="px-2 py-[4px] font-bold text-slate-700">
-                        <span className="text-[9px] mr-1 text-slate-400 select-none">
-                          {exp[g.nivel] ? "▼" : "▶"}
-                        </span>
-                        {g.nivel}
-                      </td>
-                      <td className="px-2 py-[4px] text-right font-bold text-slate-700 tabular-nums">
-                        {g.total}
-                      </td>
-                    </tr>
-                    {exp[g.nivel] && g.hijos.map((h, hi) => (
-                      <tr key={`h-${g.nivel}-${h.modalidad}`}
-                        className={hi % 2 === 0 ? "bg-white" : "bg-[#f2f5f8]"}>
-                        <td className="pl-6 pr-2 py-[3px] text-slate-600">{h.modalidad}</td>
-                        <td className="px-2 py-[3px] text-right text-slate-600 tabular-nums">{h.count}</td>
-                      </tr>
-                    ))}
-                  </>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-[#dce3ea] border-t-2 border-slate-400 font-bold">
-                  <td className="px-2 py-1 text-slate-700">Total</td>
-                  <td className="px-2 py-1 text-right text-slate-700 tabular-nums">{totalGeneral}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-        </div>
-      )}
+    {/* HEADER */}
+    <div className="bg-[#2d3748] text-white text-center rounded py-2.5">
+      <span className="text-[13px] font-bold tracking-wide">
+        SEDE UNIMINUTO BOGOTÁ / OFERTA ACADÉMICA
+      </span>
     </div>
-  );
+
+    {/* FILTROS */}
+    <div className="bg-white border-b px-2 py-1">
+      <div className="flex flex-wrap gap-2 items-end [&>*]:flex-1 [&>*]:min-w-[130px]">
+        {opcionesPer.length > 0 && (
+          <DropdownMulti
+            label="Periodicidad"
+            options={opcionesPer.map(o => ({ label: o, value: o }))}
+            selected={selPer}
+            onChange={setSelPer}
+          />
+        )}
+        {opcionesMod.length > 0 && (
+          <DropdownMulti
+            label="Modalidad"
+            options={opcionesMod.map(o => ({ label: o, value: o }))}
+            selected={selMod}
+            onChange={setSelMod}
+          />
+        )}
+        {opcionesNiv.length > 0 && (
+          <DropdownMulti
+            label="Nivel Académico"
+            options={opcionesNiv.map(o => ({ label: o, value: o }))}
+            selected={selNiv}
+            onChange={setSelNiv}
+          />
+        )}
+        <button
+          onClick={() => { setSelPer([]); setSelMod([]); setSelNiv([]); }}
+          className="h-[30px] px-2 border rounded-md text-[11px] text-red-600 hover:bg-red-50 flex items-center justify-center gap-1 flex-1"
+        >
+          🗑 Limpiar
+        </button>
+      </div>
+    </div>
+
+    {/* ERROR */}
+    {error && (
+      <div className="bg-red-50 border border-red-300 text-red-700 rounded px-3 py-2 text-[12px]">
+        ⚠️ No se pudo cargar la oferta: {error}
+      </div>
+    )}
+
+    {/* CUERPO */}
+    {loading ? (
+      <Spinner />
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start flex-1">
+
+        {/* TORTA */}
+        <div className="border border-slate-300 rounded overflow-hidden bg-white">
+          <div className="bg-[#4a5568] text-white text-center text-[11px] font-bold py-1.5">
+            Programas por Nivel Académico
+          </div>
+          <div className="p-2" style={{ height: 380 }}>
+            {barras.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-slate-400 text-[12px]">
+                Sin resultados para los filtros seleccionados
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={barras}
+                    dataKey="valor"
+                    nameKey="nombre"
+                    outerRadius="70%"
+                    label={({ nombre, valor, percent }) =>
+                      `${valor} (${(percent * 100).toFixed(1)}%)`
+                    }
+                    labelLine={true}
+                  >
+                    {barras.map((e, i) => (
+                      <Cell key={i} fill={e.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: any, name: any) => [v, name]} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* TABLA */}
+        <div className="border border-slate-300 rounded overflow-hidden bg-white">
+          <div className="bg-[#4a5568] text-white text-center text-[11px] font-bold py-1.5">
+            Programas por Nivel Académico y Modalidad
+          </div>
+          <table className="w-full border-collapse text-[11px]">
+            <thead>
+              <tr className="bg-[#dce3ea]">
+                <th className="px-2 py-1 text-left font-bold text-slate-700 border-b border-slate-400">Nivel</th>
+                <th className="px-2 py-1 text-right font-bold text-slate-700 border-b border-slate-400">SNIES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tabla.map((g) => (
+                <>
+                  <tr
+                    key={`g-${g.nivel}`}
+                    className="bg-[#eaeff4] border-t border-slate-200 cursor-pointer hover:bg-[#d8e1ea]"
+                    onClick={() => setExp(p => ({ ...p, [g.nivel]: !p[g.nivel] }))}
+                  >
+                    <td className="px-2 py-[4px] font-bold text-slate-700">
+                      <span className="text-[9px] mr-1 text-slate-400 select-none">
+                        {exp[g.nivel] ? "▼" : "▶"}
+                      </span>
+                      {g.nivel}
+                    </td>
+                    <td className="px-2 py-[4px] text-right font-bold text-slate-700 tabular-nums">
+                      {g.total}
+                    </td>
+                  </tr>
+                  {exp[g.nivel] && g.hijos.map((h, hi) => (
+                    <tr key={`h-${g.nivel}-${h.modalidad}`}
+                      className={hi % 2 === 0 ? "bg-white" : "bg-[#f2f5f8]"}>
+                      <td className="pl-6 pr-2 py-[3px] text-slate-600">{h.modalidad}</td>
+                      <td className="px-2 py-[3px] text-right text-slate-600 tabular-nums">{h.count}</td>
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-[#dce3ea] border-t-2 border-slate-400 font-bold">
+                <td className="px-2 py-1 text-slate-700">Total</td>
+                <td className="px-2 py-1 text-right text-slate-700 tabular-nums">{totalGeneral}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      </div>
+    )}
+  </div>
+);
 }
 
 export default OfertaView;
