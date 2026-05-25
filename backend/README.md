@@ -1,12 +1,12 @@
-# Backend API - Azure SQL Database (NUEVA_APP)
+# Backend API - Azure SQL Database (DB-01)
 
 API backend para conectar la aplicación React con Azure SQL Database.
 
 ## 📋 Información de la Base de Datos
 
-- **Servidor**: admindpla.database.windows.net
-- **Base de datos**: NUEVA_APP
-- **Usuario**: admindpla2
+- **Servidor**: eco360.database.windows.net
+- **Base de datos**: DB-01
+- **Usuario**: CloudSA663fff41
 - **Ubicación**: Brazil South
 - **Firewall**: ✅ Configurado (regla "Abierta")
 
@@ -33,9 +33,9 @@ npm install
    
 2. Edita el archivo `.env` y reemplaza `TU_CONTRASEÑA_AQUI` con tu contraseña real de Azure SQL:
    ```
-   AZURE_SQL_SERVER=admindpla.database.windows.net
-   AZURE_SQL_DATABASE=NUEVA_APP
-   AZURE_SQL_USER=admindpla2
+   AZURE_SQL_SERVER=eco360.database.windows.net
+   AZURE_SQL_DATABASE=BD-01
+   AZURE_SQL_USER=CloudSA663fff41
    AZURE_SQL_PASSWORD=tu_contraseña_real_aqui
    PORT=3001
    ```
@@ -95,7 +95,7 @@ curl http://localhost:3001/api/health
 
 ### Error: "Login failed for user"
 - Verifica que la contraseña en el archivo `.env` sea correcta
-- Asegúrate de que el usuario `admindpla2` tenga permisos en la base de datos
+- Asegúrate de que el usuario `CloudSA663fff41` tenga permisos en la base de datos
 
 ### Error: "Cannot open server"
 - Verifica que las reglas de firewall estén configuradas correctamente en Azure
