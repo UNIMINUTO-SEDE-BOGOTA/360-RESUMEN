@@ -22,7 +22,7 @@ const API_URL =
   (typeof import.meta !== "undefined" &&
     (import.meta as any).env &&
     (import.meta as any).env.VITE_API_URL) ||
-  "https://three60-resumen-backend.onrender.com;
+  "https://three60-resumen-backend.onrender.com";
 
 // ==================== INTERFACES ====================
 
