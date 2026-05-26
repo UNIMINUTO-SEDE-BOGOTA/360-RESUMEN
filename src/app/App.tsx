@@ -757,6 +757,7 @@ console.log("All rows:", escuelaRows);
 
   // Disparar carga al cambiar filtros o subvista
   useEffect(() => {
+    if (selYears.length === 0) return;
     if (subViewEstudiantes === "pareto") {
       loadPareto();
     } else {
@@ -797,329 +798,311 @@ console.log("All rows:", escuelaRows);
   // ==================== RENDER ====================
 
   return (
-// DESPUÉS — envueltos juntos en sticky
-<div className="sticky top-0 z-50 md:static">
-  <header className="bg-white border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <div className="min-h-screen flex flex-col">
 
-        {/* LOGO */}
-        <div className="flex items-center gap-3 min-w-0">
-          <img
-            src="/Logo Bogotá 2.png"
-            alt="Uniminuto"
-            className="h-16 object-contain"
-          />
-          <div className="leading-tight truncate">
-            <h1 className="text-sm font-bold text-gray-800">360 Resumen</h1>
-            <p className="text-[10px] text-gray-500">UNIMINUTO • 2020–2026</p>
-          </div>
-        </div>
+    {/* HEADER — sticky solo él */}
+    <header className="sticky top-0 z-50 bg-white border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3">
 
-        {/* TABS */}
-        <div className="flex justify-center">
-          <div className="flex flex-wrap gap-2">
-            {["estudiantes", "colaboradores", "comparativos", "oferta", "investigacion"].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-1.5 rounded-md text-xs capitalize transition ${
-                  activeTab === tab
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ACCIONES */}
-        <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-          <button
-            onClick={forceRefresh}
-            className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 text-sm font-medium"
-          >
-            <RefreshCw size={18} /> Actualizar
-          </button>
-          <button
-  onClick={() => window.open(
-    "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
-    "_blank"
-  )}
-  className="flex-1 sm:flex-none bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-700"
->
-  <Gauge size={18} /> 360
-</button>
-        </div>
-
-      </header>
-
-      {/* MARQUEE */}
-  <div className="bg-slate-900 text-white text-xs overflow-hidden border-y">
-        <div className="overflow-hidden">
-          <div
-            className="flex whitespace-nowrap"
-            style={{ animation: "marquee 30s linear infinite", width: "max-content" }}
-          >
-            {[...Array(6)].map((_, i) => (
-              <span key={i} className="px-6">
-                Sistema Integrado de Información · Corte: {fechaCorte}
-              </span>
-            ))}
-            {[...Array(6)].map((_, i) => (
-              <span key={`d-${i}`} className="px-6">
-                Sistema Integrado de Información · Corte: {fechaCorte}
-              </span>
-            ))}
-          </div>
+      {/* LOGO */}
+      <div className="flex items-center gap-3 min-w-0">
+        <img
+          src="/Logo Bogotá 2.png"
+          alt="Uniminuto"
+          className="h-16 object-contain"
+        />
+        <div className="leading-tight truncate">
+          <h1 className="text-sm font-bold text-gray-800">360 Resumen</h1>
+          <p className="text-[10px] text-gray-500">UNIMINUTO • 2020–2026</p>
         </div>
       </div>
 
-      {/* MAIN */}
-        <main className="flex-1 px-3 py-3 overflow-y-auto">
-        <div className="max-w-7xl mx-auto flex-1 min-h-0 flex flex-col gap-2">
+      {/* TABS */}
+      <div className="flex justify-center">
+        <div className="flex flex-wrap gap-2">
+          {["estudiantes", "colaboradores", "comparativos", "oferta", "investigacion"].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-1.5 rounded-md text-xs capitalize transition ${
+                activeTab === tab
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 hover:bg-gray-200"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* STATUS */}
-          <div className="flex justify-between text-[11px]">
-            {err && <span className="text-red-500">{err}</span>}
-            {isLoading && <span className="text-gray-500">Cargando…</span>}
-          </div>
+      {/* ACCIONES */}
+      <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+        <button
+          onClick={forceRefresh}
+          className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 text-sm font-medium"
+        >
+          <RefreshCw size={18} /> Actualizar
+        </button>
+        <button
+          onClick={() => window.open(
+            "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
+            "_blank"
+          )}
+          className="flex-1 sm:flex-none bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-700"
+        >
+          <Gauge size={18} /> 360
+        </button>
+      </div>
+    </header>
 
-          {/* CONTENEDOR PRINCIPAL */}
-          <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm p-3 flex flex-col">
+    {/* MARQUEE — sticky debajo del header */}
+    <div className="sticky top-[72px] z-40 bg-slate-900 text-white text-xs overflow-hidden border-y">
+      <div className="overflow-hidden">
+        <div
+          className="flex whitespace-nowrap"
+          style={{ animation: "marquee 30s linear infinite", width: "max-content" }}
+        >
+          {[...Array(6)].map((_, i) => (
+            <span key={i} className="px-6">
+              Sistema Integrado de Información · Corte: {fechaCorte}
+            </span>
+          ))}
+          {[...Array(6)].map((_, i) => (
+            <span key={`d-${i}`} className="px-6">
+              Sistema Integrado de Información · Corte: {fechaCorte}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
 
-            {/* HEADER INTERNO — solo en pestaña estudiantes */}
-            {/* HEADER INTERNO — solo en pestaña estudiantes */}
-{activeTab === "estudiantes" && (
-  <div className="flex justify-end items-center mb-2">
-    <button
-      onClick={() =>
-        setSubViewEstudiantes(prev => prev === "pareto" ? "dashboard" : "pareto")
-      }
-      className={`px-4 py-1.5 text-sm font-medium rounded-md shadow-sm transition ${
-        subViewEstudiantes === "pareto"
-          ? "bg-gray-500 text-white hover:bg-gray-600"
-          : "bg-yellow-500 text-black hover:bg-yellow-600"
-      }`}
-    >
-      {subViewEstudiantes === "pareto" ? "← Volver" : "Pareto"}
-    </button>
-  </div>
-)}
+    {/* MAIN — flujo normal, sin sticky */}
+    <main className="flex-1 px-3 py-3">
+      <div className="max-w-7xl mx-auto flex flex-col gap-2">
 
-            {/* CONTENIDO */}
-            <div className="flex-1 min-h-0">
+        {/* STATUS */}
+        <div className="flex justify-between text-[11px]">
+          {err && <span className="text-red-500">{err}</span>}
+          {isLoading && <span className="text-gray-500">Cargando…</span>}
+        </div>
 
-              {/* ── TAB: ESTUDIANTES ── */}
-              {activeTab === "estudiantes" && (
-                <div className="flex flex-col gap-3 h-full min-h-0">
+        {/* CONTENEDOR PRINCIPAL */}
+        <div className="bg-white rounded-xl shadow-sm p-3 flex flex-col">
 
-                  {/* DASHBOARD */}
-                  {subViewEstudiantes !== "pareto" && (
-                    <DashboardCharts
-                      stats={stats}
-                      modalidadBreakdown={modalidadBreakdown}
-                      trend={trend}
-                      ausDes={ausDes}
-                      byCentro={byCentro}
-                      byEscuela={byEscuela}
-                      virtual2026S1={virtual2026S1}
-                      filtersComponent={
-                        <FiltersMulti
-                          years={base.years.map(y => ({ label: y, value: y }))}
-                          modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
-                          niveles={base.niveles.map(n => ({ label: n, value: n }))}
-                          periodos={base.periodos.map(p => ({ label: p, value: p }))}                           centros={base.centros.map(c => ({ label: c, value: c }))}
-                          selYears={selYears} setSelYears={setSelYears}
-                          selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                          selNiveles={selNiveles} setSelNiveles={setSelNiveles}
-                          selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
+          {/* BOTÓN PARETO — solo en pestaña estudiantes */}
+          {activeTab === "estudiantes" && (
+            <div className="flex justify-end items-center mb-2">
+              <button
+                onClick={() =>
+                  setSubViewEstudiantes(prev => prev === "pareto" ? "dashboard" : "pareto")
+                }
+                className={`px-4 py-1.5 text-sm font-medium rounded-md shadow-sm transition ${
+                  subViewEstudiantes === "pareto"
+                    ? "bg-gray-500 text-white hover:bg-gray-600"
+                    : "bg-yellow-500 text-black hover:bg-yellow-600"
+                }`}
+              >
+                {subViewEstudiantes === "pareto" ? "← Volver" : "Pareto"}
+              </button>
+            </div>
+          )}
 
-                          selCentros={selCentros} setSelCentros={setSelCentros}
-                          clearAll={clearAll}
-                        />
-                      }
-                    />
-                  )}
+          {/* CONTENIDO */}
+          <div>
 
-                  {/* PARETO */}
-                  {subViewEstudiantes === "pareto" && (
-                    <>
-                      {subViewPareto === "proyectado" ? (
+            {/* ── TAB: ESTUDIANTES ── */}
+            {activeTab === "estudiantes" && (
+              <div className="flex flex-col gap-3">
 
-                        // ── PARETO PROYECTADO ──
-                        <ParetoProyectado
-                          fechaCorte={fechaCorte}
-                          base={base}
-                          listaProgramas={listaProgramas}
-                          pareto80={pareto80}
-                          pareto20={pareto20}
-                          dataChart={dataChart}
-                          selYears={selYears} setSelYears={setSelYears}
-                          selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                          selNivelFormacion={selNivelFormacion} setSelNivelFormacion={setSelNivelFormacion}
-                          selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
-                          selCentros={selCentros} setSelCentros={setSelCentros}
-                          selProgramas={selProgramas} setSelProgramas={setSelProgramas}
-                          selPeriodicidades={selPeriodicidades} setSelPeriodicidades={setSelPeriodicidades}
-                          selNiveles={selNiveles} setSelNiveles={setSelNiveles}
-                          selNivelesFormacion={selNivelesFormacion} setSelNivelesFormacion={setSelNivelesFormacion}
-                          selSedes={selSedes} setSelSedes={setSelSedes}
-                          selFacultades={selFacultades} setSelFacultades={setSelFacultades}
-                          clearAll={clearAll}
-                          onVolver={() => setSubViewEstudiantes("dashboard")}
-                          onIrEjecutado={() => setSubViewPareto("ejecutado")}
-                        />
+                {/* DASHBOARD */}
+                {subViewEstudiantes !== "pareto" && (
+                  <DashboardCharts
+                    stats={stats}
+                    modalidadBreakdown={modalidadBreakdown}
+                    trend={trend}
+                    ausDes={ausDes}
+                    byCentro={byCentro}
+                    byEscuela={byEscuela}
+                    virtual2026S1={virtual2026S1}
+                    filtersComponent={
+                      <FiltersMulti
+                        years={base.years.map(y => ({ label: y, value: y }))}
+                        modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
+                        niveles={base.niveles.map(n => ({ label: n, value: n }))}
+                        periodos={base.periodos.map(p => ({ label: p, value: p }))}
+                        centros={base.centros.map(c => ({ label: c, value: c }))}
+                        selYears={selYears} setSelYears={setSelYears}
+                        selModalidades={selModalidades} setSelModalidades={setSelModalidades}
+                        selNiveles={selNiveles} setSelNiveles={setSelNiveles}
+                        selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
+                        selCentros={selCentros} setSelCentros={setSelCentros}
+                        clearAll={clearAll}
+                      />
+                    }
+                  />
+                )}
 
-                      ) : (
+                {/* PARETO */}
+                {subViewEstudiantes === "pareto" && (
+                  <>
+                    {subViewPareto === "proyectado" ? (
 
-                        // ── PARETO EJECUTADO ──
-                        <div className="flex flex-col gap-4 h-full min-h-0">
+                      // ── PARETO PROYECTADO ──
+                      <ParetoProyectado
+                        fechaCorte={fechaCorte}
+                        base={base}
+                        listaProgramas={listaProgramas}
+                        pareto80={pareto80}
+                        pareto20={pareto20}
+                        dataChart={dataChart}
+                        selYears={selYears} setSelYears={setSelYears}
+                        selModalidades={selModalidades} setSelModalidades={setSelModalidades}
+                        selNivelFormacion={selNivelFormacion} setSelNivelFormacion={setSelNivelFormacion}
+                        selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
+                        selCentros={selCentros} setSelCentros={setSelCentros}
+                        selProgramas={selProgramas} setSelProgramas={setSelProgramas}
+                        selPeriodicidades={selPeriodicidades} setSelPeriodicidades={setSelPeriodicidades}
+                        selNiveles={selNiveles} setSelNiveles={setSelNiveles}
+                        selNivelesFormacion={selNivelesFormacion} setSelNivelesFormacion={setSelNivelesFormacion}
+                        selSedes={selSedes} setSelSedes={setSelSedes}
+                        selFacultades={selFacultades} setSelFacultades={setSelFacultades}
+                        clearAll={clearAll}
+                        onVolver={() => setSubViewEstudiantes("dashboard")}
+                        onIrEjecutado={() => setSubViewPareto("ejecutado")}
+                      />
 
-                          {/* HEADER */}
-<div className="flex flex-col sm:flex-row items-center gap-2">
+                    ) : (
 
-  {/* BOTÓN */}
-  <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-    <button
-      onClick={() => setSubViewPareto("proyectado")}
-      className="px-4 py-2 text-sm font-medium rounded-md shadow bg-yellow-400 text-black hover:bg-yellow-500 transition whitespace-nowrap"
-    >
-      Pareto proyectado
-    </button>
-  </div>
+                      // ── PARETO EJECUTADO ──
+                      <div className="flex flex-col gap-4">
 
-  {/* TÍTULO */}
-  <div className="flex-1 w-full text-center">
-    <h2 className="
-      text-[11px] sm:text-sm md:text-base
-      font-bold text-white bg-slate-700
-      px-3 sm:px-6 py-2
-      rounded-md
-      text-center
-      break-words
-      w-full sm:w-auto
-      mx-auto
-    ">
-      SEDE UNIMINUTO BOGOTÁ / PARETO EJECUTADO
-    </h2>
-  </div>
-
-</div>
-
-                          {/* FILTROS PARETO EJECUTADO */}
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <FiltersMulti
-                              years={base.years.map(y => ({ label: y, value: y }))}
-                              modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
-                              niveles={[]}                                                       
-                              selNiveles={[]}                                                    
-                              setSelNiveles={() => {}}                                           
-                              nivelesFormacion={base.nivelesFormacion.map(n => ({ label: n, value: n }))}
-                              selNivelesFormacion={selNivelFormacion}
-                              setSelNivelesFormacion={setSelNivelFormacion}
-                              periodos={base.periodos.map(p => ({ label: p, value: p }))}
-                              centros={base.centros.map(c => ({ label: c, value: c }))}
-                              programas={listaProgramas}
-                              selProgramas={selProgramas}
-                              setSelProgramas={setSelProgramas}
-                              selYears={selYears} setSelYears={setSelYears}
-                              selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                              selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
-                              selCentros={selCentros} setSelCentros={setSelCentros}
-                              clearAll={clearAll}
-                            />
+                        {/* HEADER */}
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                          <button
+                            onClick={() => setSubViewPareto("proyectado")}
+                            className="px-4 py-2 text-sm font-medium rounded-md shadow bg-yellow-400 text-black hover:bg-yellow-500 transition whitespace-nowrap"
+                          >
+                            Pareto proyectado
+                          </button>
+                          <div className="flex-1 w-full text-center">
+                            <h2 className="text-[11px] sm:text-sm md:text-base font-bold text-white bg-slate-700 px-3 sm:px-6 py-2 rounded-md text-center break-words w-full mx-auto">
+                              SEDE UNIMINUTO BOGOTÁ / PARETO EJECUTADO
+                            </h2>
                           </div>
+                        </div>
 
-                          {/* CONTENIDO PARETO EJECUTADO */}
-                          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+                        {/* FILTROS PARETO EJECUTADO */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <FiltersMulti
+                            years={base.years.map(y => ({ label: y, value: y }))}
+                            modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
+                            niveles={[]}
+                            selNiveles={[]}
+                            setSelNiveles={() => {}}
+                            nivelesFormacion={base.nivelesFormacion.map(n => ({ label: n, value: n }))}
+                            selNivelesFormacion={selNivelFormacion}
+                            setSelNivelesFormacion={setSelNivelFormacion}
+                            periodos={base.periodos.map(p => ({ label: p, value: p }))}
+                            centros={base.centros.map(c => ({ label: c, value: c }))}
+                            programas={listaProgramas}
+                            selProgramas={selProgramas}
+                            setSelProgramas={setSelProgramas}
+                            selYears={selYears} setSelYears={setSelYears}
+                            selModalidades={selModalidades} setSelModalidades={setSelModalidades}
+                            selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
+                            selCentros={selCentros} setSelCentros={setSelCentros}
+                            clearAll={clearAll}
+                          />
+                        </div>
 
-                            {/* COLUMNA IZQUIERDA: tablas */}
-                            <div className="flex flex-col gap-3 w-full lg:w-80 lg:flex-shrink-0">
+                        {/* CONTENIDO PARETO EJECUTADO */}
+                        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
-                              {/* TABLA 80% */}
-                              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden w-full min-w-0">
+                          {/* COLUMNA IZQUIERDA: tablas */}
+                          <div className="flex flex-col gap-3">
 
-                                <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
-                                  Programas que contienen el 80% de los estudiantes
-                                </div>
-                                <div className="overflow-y-auto max-h-56">
-                                  <table className="w-full text-xs">
-                                    <thead className="bg-slate-50 sticky top-0">
-                                      <tr>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa Académico</th>
-                                        <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {pareto80.map((p, i) => (
-                                        <tr key={i} className="border-t border-slate-100">
-                                          <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                                          <td className="px-2 py-1 text-slate-700">{p.programa}</td>
-                                          <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
-                                        <td className="px-2 py-1.5" />
-                                        <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
-                                        <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
-                                          {pareto80.reduce((a, b) => a + b.valor, 0)}
-                                        </td>
-                                      </tr>
-                                    </tfoot>
-                                  </table>
-                                </div>
-                              </div>
-
-                              {/* TABLA 20% */}
-                              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                                <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
-                                  Programas que contienen el 20% de los estudiantes
-                                </div>
-                                <div className="overflow-y-auto max-h-56">
-                                  <table className="w-full text-xs">
-                                    <thead className="bg-slate-50 sticky top-0">
-                                      <tr>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa Académico</th>
-                                        <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {pareto20.map((p, i) => (
-                                        <tr key={i} className="border-t border-slate-100">
-                                          <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                                          <td className="px-2 py-1 text-slate-700">{p.programa}</td>
-                                          <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
-                                        <td className="px-2 py-1.5" />
-                                        <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
-                                        <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
-                                          {pareto20.reduce((a, b) => a + b.valor, 0)}
-                                        </td>
-                                      </tr>
-                                    </tfoot>
-                                  </table>
-                                </div>
-                              </div>
-
-                            </div>
-
-                            {/* GRÁFICA */}
+                            {/* TABLA 80% */}
                             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                               <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
-                                Pareto de programas en relación a estudiantes nuevos
+                                Programas que contienen el 80% de los estudiantes
                               </div>
-                              <div className="p-2 overflow-x-auto">
-                               <div style={{ minWidth: "520px" }}>
-                             <ResponsiveContainer width="100%" height={420}>
+                              <div className="overflow-y-auto max-h-56">
+                                <table className="w-full text-xs">
+                                  <thead className="bg-slate-50 sticky top-0">
+                                    <tr>
+                                      <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
+                                      <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa Académico</th>
+                                      <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {pareto80.map((p, i) => (
+                                      <tr key={i} className="border-t border-slate-100">
+                                        <td className="px-2 py-1 text-slate-400">{i + 1}</td>
+                                        <td className="px-2 py-1 text-slate-700">{p.programa}</td>
+                                        <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                  <tfoot>
+                                    <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
+                                      <td className="px-2 py-1.5" />
+                                      <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
+                                      <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
+                                        {pareto80.reduce((a, b) => a + b.valor, 0)}
+                                      </td>
+                                    </tr>
+                                  </tfoot>
+                                </table>
+                              </div>
+                            </div>
+
+                            {/* TABLA 20% */}
+                            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                              <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
+                                Programas que contienen el 20% de los estudiantes
+                              </div>
+                              <div className="overflow-y-auto max-h-56">
+                                <table className="w-full text-xs">
+                                  <thead className="bg-slate-50 sticky top-0">
+                                    <tr>
+                                      <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
+                                      <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa Académico</th>
+                                      <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {pareto20.map((p, i) => (
+                                      <tr key={i} className="border-t border-slate-100">
+                                        <td className="px-2 py-1 text-slate-400">{i + 1}</td>
+                                        <td className="px-2 py-1 text-slate-700">{p.programa}</td>
+                                        <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                  <tfoot>
+                                    <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
+                                      <td className="px-2 py-1.5" />
+                                      <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
+                                      <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
+                                        {pareto20.reduce((a, b) => a + b.valor, 0)}
+                                      </td>
+                                    </tr>
+                                  </tfoot>
+                                </table>
+                              </div>
+                            </div>
+
+                          </div>
+
+                          {/* GRÁFICA */}
+                          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
+                              Pareto de programas en relación a estudiantes nuevos
+                            </div>
+                            <div className="p-2 overflow-x-auto">
+                              <div style={{ minWidth: "520px" }}>
+                                <ResponsiveContainer width="100%" height={420}>
                                   <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
                                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                                     <XAxis
@@ -1191,41 +1174,40 @@ console.log("All rows:", escuelaRows);
                                 </ResponsiveContainer>
                               </div>
                             </div>
-                            </div>
                           </div>
+
                         </div>
-                      )}
-                    </>
-                  )}
+                      </div>
+                    )}
+                  </>
+                )}
 
-                </div>
-              )}
+              </div>
+            )}
 
-              {/* ── OTROS TABS ── */}
-              {activeTab === "colaboradores" && <ColaboradoresView />}
-              {activeTab === "comparativos" && <ComparativosView />}
-              {activeTab === "oferta" && <OfertaView fechaCorte={fechaCorte} />}
-              {activeTab === "investigacion" && (
-                <div className="h-full w-full">
-                  <iframe
-                    title="Investigacion Power BI"
-                    src="https://app.powerbi.com/view?r=eyJrIjoiNmI4OTU2YTItZDdkMy00ZDU4LWJkMzgtYTM5Yzc1MDUyYzUxIiwidCI6ImIxYmE4NWViLWEyNTMtNDQ2Ny05ZWU4LWQ0ZjhlZDRkZjMwMCIsImMiOjR9"
-                    className="w-full h-[calc(100vh-180px)] rounded-md border"
-                    frameBorder="0"
-                    allowFullScreen
-                  />
-                </div>
-              )}
-              
+            {/* ── OTROS TABS ── */}
+            {activeTab === "colaboradores" && <ColaboradoresView />}
+            {activeTab === "comparativos" && <ComparativosView />}
+            {activeTab === "oferta" && <OfertaView fechaCorte={fechaCorte} />}
+            {activeTab === "investigacion" && (
+              <div className="w-full">
+                <iframe
+                  title="Investigacion Power BI"
+                  src="https://app.powerbi.com/view?r=eyJrIjoiNmI4OTU2YTItZDdkMy00ZDU4LWJkMzgtYTM5Yzc1MDUyYzUxIiwidCI6ImIxYmE4NWViLWEyNTMtNDQ2Ny05ZWU4LWQ0ZjhlZDRkZjMwMCIsImMiOjR9"
+                  className="w-full h-[calc(100vh-180px)] rounded-md border"
+                  frameBorder="0"
+                  allowFullScreen
+                />
+              </div>
+            )}
 
-
-
-            </div>
           </div>
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    </main>
+
+  </div>
+);
 }
 
 export default App;
