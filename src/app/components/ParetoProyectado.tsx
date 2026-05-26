@@ -143,7 +143,7 @@ export function ParetoProyectado({
       </div>
 
       {/* CONTENIDO */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-3 w-full">
 
         {/* COLUMNA IZQUIERDA */}
         <div className="flex flex-col gap-3">
@@ -227,8 +227,9 @@ export function ParetoProyectado({
           <div className="bg-slate-600 text-white text-xs px-3 py-2 font-medium">
             Pareto de programas en relación a estudiantes nuevos
           </div>
-          <div className="p-2 h-[480px]">
-            <ResponsiveContainer width="100%" height="100%">
+           <div className="p-2 overflow-x-auto">
+             <div style={{ minWidth: "520px" }}>
+               <ResponsiveContainer width="100%" height={420}>
               <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
 
@@ -305,6 +306,7 @@ export function ParetoProyectado({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+              </div>
         </div>
 
       </div>
