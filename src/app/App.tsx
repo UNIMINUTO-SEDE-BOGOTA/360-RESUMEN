@@ -1117,8 +1117,9 @@ console.log("All rows:", escuelaRows);
                               <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                 Pareto de programas en relación a estudiantes nuevos
                               </div>
-                              <div className="p-2 h-[500px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                              <div className="p-2 overflow-x-auto">
+                               <div style={{ minWidth: "520px" }}>
+                             <ResponsiveContainer width="100%" height={420}>
                                   <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
                                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                                     <XAxis
@@ -1190,7 +1191,7 @@ console.log("All rows:", escuelaRows);
                                 </ResponsiveContainer>
                               </div>
                             </div>
-
+                            </div>
                           </div>
                         </div>
                       )}
