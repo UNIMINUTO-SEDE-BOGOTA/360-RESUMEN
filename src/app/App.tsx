@@ -1216,7 +1216,16 @@ console.log("All rows:", escuelaRows);
                 </div>
               )}
               
-
+{activeTab === "360" && (
+  <div className="h-full w-full">
+    <iframe
+      title="Dashboard 360"
+      src="
+      className="w-full h-[calc(100vh-180px)] rounded-md border"
+      frameBorder="0"
+    />
+  </div>
+)}
 
 
 
