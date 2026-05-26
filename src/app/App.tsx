@@ -237,7 +237,7 @@ function App() {
 
   // 3) Resto de combos: modalidades, períodos combinados, centros, etc.
   useEffect(() => {
-    (async () => {
+    const timer = setTimeout(async () => {
       try {
         const all = await fetchAzureData();
 
@@ -314,9 +314,11 @@ function App() {
 
       } catch (e) {
         console.error("Error cargando combos:", e);
-      }
-    })();
-  }, []);
+    }
+  }, 1500);
+
+  return () => clearTimeout(timer);
+}, []);
 
   // Reset subview al cambiar de tab
   useEffect(() => {
@@ -1026,7 +1028,8 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                           <div className="flex flex-col lg:flex-row gap-3 w-full">
 
                             {/* COLUMNA IZQUIERDA: tablas */}
-                            <div className="flex flex-col gap-3">
+                           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden w-full min-w-0">
+
 
                               {/* TABLA 80% */}
                               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -1207,16 +1210,7 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                 </div>
               )}
               
-{activeTab === "360" && (
-  <div className="h-full w-full">
-    <iframe
-      title="Dashboard 360"
-      src="
-      className="w-full h-[calc(100vh-180px)] rounded-md border"
-      frameBorder="0"
-    />
-  </div>
-)}
+
 
 
 
