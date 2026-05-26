@@ -114,13 +114,14 @@ export function OfertaView({ fechaCorte = "20 de febrero de 2026" }: Props) {
     fetch(`${API_URL}/api/oferta-activa`)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((rows: Programa[]) => {
-        const bogota = rows.filter(r =>
-          (r.departamento || "").toLowerCase().normalize("NFD")
-            .replace(/\p{Diacritic}/gu, "").trim() === "bogota"
-        );
-        const normalizados = bogota.map(r => ({ ...r, nivelFormacion: normalizarNivel(r.nivelFormacion) }));
+        const normalizados = rows.map(r => ({ 
+          ...r, 
+          nivelFormacion: normalizarNivel(r.nivelFormacion) 
+        }));
+      
         setData(normalizados);
-        const niveles = [...new Set(bogota.map(r => r.nivelFormacion))];
+      
+        const niveles = [...new Set(normalizados.map(r => r.nivelFormacion))];
         setExp(Object.fromEntries(niveles.map(n => [n, true])));
       })
       .catch(e => setError(e.message))
