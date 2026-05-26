@@ -575,7 +575,6 @@ const escuelaRows: any[] = [];
 const totalGeneral: Record<string, number> = {};
 FAC_COLUMNS.forEach(c => (totalGeneral[c] = 0));
 
-const clean = (t: string) => (t || "").trim().toLowerCase();
 
 // ✅ Orden centros (padres)
 const centrosOrdenados = Object.keys(facMap).sort((a, b) => {
