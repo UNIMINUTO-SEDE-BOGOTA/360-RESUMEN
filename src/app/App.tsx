@@ -235,63 +235,71 @@ function App() {
   // 2) Selección inicial: el año más reciente disponible
   const [selYears, setSelYears] = useState<string[]>(["2026"]);
 
-// 3) Resto de combos: modalidades, períodos combinados, centros, etc.
+  // 3) Resto de combos: modalidades, períodos combinados, centros, etc.
   useEffect(() => {
     (async () => {
       try {
         const all = await fetchAzureData();
-  
+
         const periodicidades = [...new Set(
           all.map(d => (d.periodicidad ?? "").toString().trim()).filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  
+
         const nivelesFormacion = [...new Set(
           all.map(d => (d.nivelFormacion ?? "").toString().trim()).filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  
+
         const facultades = [...new Set(
           all.map(d => (d.facultad ?? "").toString().trim()).filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  
+
         const periodosCombinados = [...new Set(
           all
             .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : "")
             .filter(Boolean)
         )].sort((a, b) => b.localeCompare(a));
-  
+
         const sedes = [...new Set(
           all.map(d => (d.rectoria ?? "").toString().trim()).filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  
+
         const programas = [...new Set(
           all.map(d => (d.programa ?? d.siglasPrograma ?? "").toString().trim()).filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  
+
         setListaProgramas(programas.map(p => ({ label: p, value: p })));
-  
+
         const modalidades = [...new Set(
           all.map(d => (d.categoria ?? "").toString().trim()).filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  
+
         const niveles = [...new Set(
           all.map(d => normalizeNivel(d.nivelAcademico))
         )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  
+
         const centros = [...new Set(
           all.map(d => (d.centro ?? "").toString().trim()).filter(Boolean)
         )].sort((a, b) => {
           const indexA = ORDEN_CENTROS.indexOf(a);
           const indexB = ORDEN_CENTROS.indexOf(b);
-          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+
+          // Si ambos están en la lista, usar ese orden
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+
+          // Si solo uno está en la lista priorizada
           if (indexA !== -1) return -1;
           if (indexB !== -1) return 1;
+
+          // Los demás se ordenan alfabéticamente al final
           return a.localeCompare(b, "es", { sensitivity: "base" });
         });
-  
+
         setSelNiveles(prev =>
           prev.map(normalizeNivel).filter(v => ["Pregrado", "Posgrado"].includes(v))
         );
-  
+
         setBase(prev => ({
           ...prev,
           modalidades,
@@ -303,7 +311,7 @@ function App() {
           facultades,
           sedes
         }));
-  
+
       } catch (e) {
         console.error("Error cargando combos:", e);
       }
@@ -559,6 +567,8 @@ rows.forEach(r => {
 const escuelaRows: any[] = [];
 const totalGeneral: Record<string, number> = {};
 FAC_COLUMNS.forEach(c => (totalGeneral[c] = 0));
+
+
 
 // ✅ Orden centros (padres)
 const centrosOrdenados = Object.keys(facMap).sort((a, b) => {
@@ -1016,8 +1026,7 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                           <div className="flex flex-col lg:flex-row gap-3 w-full">
 
                             {/* COLUMNA IZQUIERDA: tablas */}
-                           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden w-full min-w-0">
-
+                            <div className="flex flex-col gap-3">
 
                               {/* TABLA 80% */}
                               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -1198,7 +1207,16 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                 </div>
               )}
               
-
+{activeTab === "360" && (
+  <div className="h-full w-full">
+    <iframe
+      title="Dashboard 360"
+      src="
+      className="w-full h-[calc(100vh-180px)] rounded-md border"
+      frameBorder="0"
+    />
+  </div>
+)}
 
 
 
