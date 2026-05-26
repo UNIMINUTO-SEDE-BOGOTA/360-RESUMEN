@@ -92,6 +92,8 @@ const mapModalidad = (m?: string): string => {
   return "Otra";
 };
 
+const isMobile = window.innerWidth < 768;
+
 // ✅ HOISTED: getFacSigla declarada a nivel de módulo para evitar error de uso antes de declaración
 const getFacSigla = (fac?: string): string | null => {
   if (!fac) return null;
@@ -1117,18 +1119,29 @@ console.log("All rows:", escuelaRows);
                               <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                 Pareto de programas en relación a estudiantes nuevos
                               </div>
-                              <div className="p-2 h-[500px]">
+
+                          <div className="p-2">
+                            <div className="overflow-x-auto">
+                              <div className={isMobile ? "min-w-[700px] h-[350px]" : "w-full h-[500px]"}>
+
                                 <ResponsiveContainer width="100%" height="100%">
                                   <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
                                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                    <XAxis
-                                      dataKey="programa"
-                                      tick={{ fontSize: 9 }}
-                                      interval={0}
-                                      angle={-45}
-                                      textAnchor="end"
-                                      height={90}
-                                    />
+
+                                      <XAxis
+                                        dataKey="programa"
+                                
+                                        tickFormatter={(value) =>
+                                          isMobile ? value.slice(0, 10) + "…" : value
+                                        }
+
+                                        tick={{ fontSize: isMobile ? 7 : 9 }}
+                                        interval={isMobile ? 2 : 0}   // 🔥 reduce etiquetas
+                                        angle={isMobile ? -90 : -45}
+                                        textAnchor="end"
+                                        height={isMobile ? 120 : 90}
+                                      />
+
                                     <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                                     <YAxis
                                       yAxisId="right"
@@ -1189,6 +1202,8 @@ console.log("All rows:", escuelaRows);
                                   </ComposedChart>
                                 </ResponsiveContainer>
                               </div>
+                            </div>
+                            </div>
                             </div>
 
                           </div>
