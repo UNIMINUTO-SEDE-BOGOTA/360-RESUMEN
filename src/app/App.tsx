@@ -146,7 +146,8 @@ function App() {
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
   const [subViewPareto, setSubViewPareto] = useState<"ejecutado" | "proyectado">("ejecutado");
 
-  // ── Selecciones de filtros ─
+  // ── Selecciones de filtros ──
+  const [selYears, setSelYears] = useState<string[]>([]);
   const [selModalidades, setSelModalidades] = useState<string[]>([]);
   const [selNiveles, setSelNiveles] = useState<string[]>([]);
   const [selPeriodos, setSelPeriodos] = useState<string[]>([]);
@@ -233,82 +234,96 @@ function App() {
   }, []);
 
   // 2) Selección inicial: el año más reciente disponible
-  const [selYears, setSelYears] = useState<string[]>(["2026"]);
+  useEffect(() => {
+    if (!base.years || base.years.length === 0) return;
+    setSelYears(prev => {
+      if (prev.length > 0 && prev.every(y => base.years.includes(y))) return prev;
+      return [base.years[0]];
+    });
+  }, [base.years]);
 
   // 3) Resto de combos: modalidades, períodos combinados, centros, etc.
   useEffect(() => {
-  (async () => {
-    try {
-      const all = await fetchAzureData();
+    (async () => {
+      try {
+        const all = await fetchAzureData();
 
-      const periodicidades = [...new Set(
-        all.map(d => (d.periodicidad ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+        const periodicidades = [...new Set(
+          all.map(d => (d.periodicidad ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-      const nivelesFormacion = [...new Set(
-        all.map(d => (d.nivelFormacion ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+        const nivelesFormacion = [...new Set(
+          all.map(d => (d.nivelFormacion ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-      const facultades = [...new Set(
-        all.map(d => (d.facultad ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+        const facultades = [...new Set(
+          all.map(d => (d.facultad ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-      const periodosCombinados = [...new Set(
-        all
-          .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : "")
-          .filter(Boolean)
-      )].sort((a, b) => b.localeCompare(a));
+        const periodosCombinados = [...new Set(
+          all
+            .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : "")
+            .filter(Boolean)
+        )].sort((a, b) => b.localeCompare(a));
 
-      const sedes = [...new Set(
-        all.map(d => (d.rectoria ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+        const sedes = [...new Set(
+          all.map(d => (d.rectoria ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-      const programas = [...new Set(
-        all.map(d => (d.programa ?? d.siglasPrograma ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+        const programas = [...new Set(
+          all.map(d => (d.programa ?? d.siglasPrograma ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-      setListaProgramas(programas.map(p => ({ label: p, value: p })));
+        setListaProgramas(programas.map(p => ({ label: p, value: p })));
 
-      const modalidades = [...new Set(
-        all.map(d => (d.categoria ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+        const modalidades = [...new Set(
+          all.map(d => (d.categoria ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-      const niveles = [...new Set(
-        all.map(d => normalizeNivel(d.nivelAcademico))
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+        const niveles = [...new Set(
+          all.map(d => normalizeNivel(d.nivelAcademico))
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-      const centros = [...new Set(
-        all.map(d => (d.centro ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => {
-        const indexA = ORDEN_CENTROS.indexOf(a);
-        const indexB = ORDEN_CENTROS.indexOf(b);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return a.localeCompare(b, "es", { sensitivity: "base" });
-      });
+        const centros = [...new Set(
+          all.map(d => (d.centro ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => {
+          const indexA = ORDEN_CENTROS.indexOf(a);
+          const indexB = ORDEN_CENTROS.indexOf(b);
 
-      setSelNiveles(prev =>
-        prev.map(normalizeNivel).filter(v => ["Pregrado", "Posgrado"].includes(v))
-      );
+          // Si ambos están en la lista, usar ese orden
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
 
-      setBase(prev => ({
-        ...prev,
-        modalidades,
-        niveles,
-        periodos: periodosCombinados,
-        centros,
-        periodicidades,
-        nivelesFormacion,
-        facultades,
-        sedes
-      }));
+          // Si solo uno está en la lista priorizada
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
 
-    } catch (e) {
-      console.error("Error cargando combos:", e);
-    }
-  })();
-}, []);
+          // Los demás se ordenan alfabéticamente al final
+          return a.localeCompare(b, "es", { sensitivity: "base" });
+        });
+
+        setSelNiveles(prev =>
+          prev.map(normalizeNivel).filter(v => ["Pregrado", "Posgrado"].includes(v))
+        );
+
+        setBase(prev => ({
+          ...prev,
+          modalidades,
+          niveles,
+          periodos: periodosCombinados,
+          centros,
+          periodicidades,
+          nivelesFormacion,
+          facultades,
+          sedes
+        }));
+
+      } catch (e) {
+        console.error("Error cargando combos:", e);
+      }
+    })();
+  }, []);
 
   // Reset subview al cambiar de tab
   useEffect(() => {
@@ -560,7 +575,7 @@ const escuelaRows: any[] = [];
 const totalGeneral: Record<string, number> = {};
 FAC_COLUMNS.forEach(c => (totalGeneral[c] = 0));
 
-
+const clean = (t: string) => (t || "").trim().toLowerCase();
 
 // ✅ Orden centros (padres)
 const centrosOrdenados = Object.keys(facMap).sort((a, b) => {
@@ -828,7 +843,10 @@ console.log("All rows:", escuelaRows);
             <RefreshCw size={18} /> Actualizar
           </button>
           <button
-onClick={() => window.open("https://app.powerbi.com/", "_blank")}
+  onClick={() => window.open(
+    "
+    "_blank"
+  )}
   className="flex-1 sm:flex-none bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-700"
 >
   <Gauge size={18} /> 360
@@ -1015,7 +1033,7 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                           </div>
 
                           {/* CONTENIDO PARETO EJECUTADO */}
-                          <div className="flex flex-col lg:flex-row gap-3 w-full">
+                          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
                             {/* COLUMNA IZQUIERDA: tablas */}
                             <div className="flex flex-col gap-3">
@@ -1099,9 +1117,8 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                               <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                 Pareto de programas en relación a estudiantes nuevos
                               </div>
-                                  <div className="p-2 overflow-x-auto">
-                                   <div style={{ minWidth: "520px" }}>
-                                    <ResponsiveContainer width="100%" height={420}>
+                              <div className="p-2 h-[500px]">
+                                <ResponsiveContainer width="100%" height="100%">
                                   <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
                                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                                     <XAxis
@@ -1173,7 +1190,7 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                                 </ResponsiveContainer>
                               </div>
                             </div>
-                           </div>
+
                           </div>
                         </div>
                       )}
@@ -1198,6 +1215,12 @@ onClick={() => window.open("https://app.powerbi.com/", "_blank")}
                   />
                 </div>
               )}
+              
+
+
+
+
+
             </div>
           </div>
         </div>
