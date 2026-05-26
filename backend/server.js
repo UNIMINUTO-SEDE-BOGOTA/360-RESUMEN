@@ -353,7 +353,7 @@ app.get('/api/datos/:tabla', async (req, res) => {
     const rawTabla = req.params.tabla;
 
     const page     = Math.max(1, Number(req.query.page)     || 1);
-    const pageSize = Math.min(10000, Math.max(100, Number(req.query.pageSize) || 1000));
+    const pageSize = Math.min(2000, Math.max(100, Number(req.query.pageSize) || 1000));
     const offset   = (page - 1) * pageSize;
 
     const yearsCSV            = (req.query.years            ?? '').toString();
