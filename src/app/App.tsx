@@ -146,8 +146,7 @@ function App() {
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
   const [subViewPareto, setSubViewPareto] = useState<"ejecutado" | "proyectado">("ejecutado");
 
-  // ── Selecciones de filtros ──
-  const [selYears, setSelYears] = useState<string[]>([]);
+  // ── Selecciones de filtros ─
   const [selModalidades, setSelModalidades] = useState<string[]>([]);
   const [selNiveles, setSelNiveles] = useState<string[]>([]);
   const [selPeriodos, setSelPeriodos] = useState<string[]>([]);
@@ -837,10 +836,7 @@ console.log("All rows:", escuelaRows);
             <RefreshCw size={18} /> Actualizar
           </button>
           <button
-  onClick={() => window.open(
-    "
-    "_blank"
-  )}
+onClick={() => window.open("https://app.powerbi.com/", "_blank")}
   className="flex-1 sm:flex-none bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-700"
 >
   <Gauge size={18} /> 360
