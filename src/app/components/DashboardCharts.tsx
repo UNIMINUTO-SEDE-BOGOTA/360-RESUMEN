@@ -22,7 +22,7 @@ export interface DashboardChartsProps {
     pct_ausentes: number;
     desertores: number;
     pct_desertores: number;
-    total: number;
+    total?: number;
   }[];
   byCentro: {
     categoria: string;
@@ -150,10 +150,14 @@ function TreeRow({ label, cols, depth = 0, children, defaultOpen = false }: {
   children?: React.ReactNode;
   defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   const hasKids = Array.isArray(children) ? children.length > 0 : !!children;
+
+  // ✅ FIX PRINCIPAL: inicializar con defaultOpen solo si hay hijos reales
+  const [open, setOpen] = useState(hasKids ? defaultOpen : false);
+
   const bg = depth === 0 ? "#dce8fb" : depth === 1 ? "#eef3fd" : "#f9fafe";
   const fw = depth === 0 ? 700 : depth === 1 ? 600 : 400;
+
   return (
     <>
       <tr style={{ backgroundColor: bg, fontWeight: fw, fontSize: 11 }}>
@@ -214,10 +218,7 @@ function TableScroll({ children }: { children: React.ReactNode }) {
 // ==================== TIPOS INTERNOS ====================
 
 type FacRow = Record<typeof FAC_COLUMNS[number], number> & { centro: string; total: number };
-
-type FacTreeNode = {
-  parent: FacRow & { children: FacRow[] };
-};
+type FacTreeNode = { parent: FacRow & { children: FacRow[] } };
 
 // ==================== COMPONENTE PRINCIPAL ====================
 
@@ -232,6 +233,9 @@ export function DashboardCharts({
 }: DashboardChartsProps) {
 
   const totalEst = stats?.estudiantes ?? 0;
+
+  // ✅ GUARD: determinar si hay datos reales para renderizar las tablas
+  const hayDatos = totalEst > 0 || byCentro.length > 0 || modalidadBreakdown.length > 0;
 
   const tStyle: React.CSSProperties = {
     width: "max-content",
@@ -285,7 +289,6 @@ export function DashboardCharts({
 
   const nivelRows = Array.from(nivelMap.values()).filter(n => n.totales > 0);
 
-  // Deduplicar mods dentro de cada nivel
   nivelRows.forEach(n => {
     const map = new Map();
     n.mods.forEach(m => {
@@ -302,9 +305,9 @@ export function DashboardCharts({
     n.mods = Array.from(map.values());
   });
 
-  const totalNuevos   = nivelRows.reduce((s, n) => s + n.nuevos,   0);
+  const totalNuevos    = nivelRows.reduce((s, n) => s + n.nuevos,    0);
   const totalContinuos = nivelRows.reduce((s, n) => s + n.continuos, 0);
-  const totalTotales  = nivelRows.reduce((s, n) => s + n.totales,  0);
+  const totalTotales   = nivelRows.reduce((s, n) => s + n.totales,   0);
 
   // ── CENTROS ───────────────────────────────────────────────────
 
@@ -327,7 +330,6 @@ export function DashboardCharts({
     }))
   }));
 
-  // Deduplicar mods dentro de cada operación
   centros.forEach(c => {
     c.operaciones.forEach(o => {
       const map = new Map();
@@ -350,96 +352,59 @@ export function DashboardCharts({
   const totalCentroCont   = centros.reduce((s, c) => s + c.continuos, 0);
 
   // ── FACULTADES → facTree ──────────────────────────────────────
-  // Estructura: Centro → CentroOperacion → { FCCO, FCEM, … }
 
-// ── FACULTADES → facTree ──────────────────────────────────────
-// Estructura: Centro → CentroOperacion → { FCCO, FCEM, … }
-
-// ── FACULTADES → TABLA PLANA (VERSIÓN FINAL DEFINITIVA) ──
-
-// Tomar SOLO las filas agregadas por Centro Universitario
-// (centroOperacion vacío) y excluir la fila "Total"
-// ── FACULTADES → ÁRBOL FINAL (PADRE + HIJOS CON MISMO TOTAL) ──
-
-const emptyFacRow = (): FacRow => ({
-  centro: "",
-  FCCO: 0, FCEM: 0, FCHS: 0, FCSA: 0, FEBPE: 0, FEDU: 0, FING: 0,
-  total: 0,
-});
-
-// 1️⃣ Padres = centros universitarios
-const padres = byEscuela.filter(
-  r => r.centroOperacion === "" && r.centro !== "Total"
-);
-
-// 2️⃣ Hijos = centros de operación
-const hijos = byEscuela.filter(
-  r => r.centroOperacion && r.centroOperacion !== "Total"
-);
-
-// 3️⃣ Agrupar hijos por padre
-const hijosPorPadre = new Map<string, FacRow[]>();
-
-hijos.forEach(h => {
-  if (!hijosPorPadre.has(h.centroOperacion)) {
-    hijosPorPadre.set(h.centroOperacion, []);
-  }
-
-  hijosPorPadre.get(h.centroOperacion)!.push({
-    centro: h.centro,
-    FCCO: Number(h.FCCO || 0),
-    FCEM: Number(h.FCEM || 0),
-    FCHS: Number(h.FCHS || 0),
-    FCSA: Number(h.FCSA || 0),
-    FEBPE: Number(h.FEBPE || 0),
-    FEDU: Number(h.FEDU || 0),
-    FING: Number(h.FING || 0),
-    total: Number(h.total || 0),
+  const emptyFacRow = (): FacRow => ({
+    centro: "",
+    FCCO: 0, FCEM: 0, FCHS: 0, FCSA: 0, FEBPE: 0, FEDU: 0, FING: 0,
+    total: 0,
   });
-});
 
-// 4️⃣ Construir árbol final
-const facTree: FacTreeNode[] = [];
+  const padres = byEscuela.filter(r => r.centroOperacion === "" && r.centro !== "Total");
+  const hijos  = byEscuela.filter(r => r.centroOperacion && r.centroOperacion !== "Total");
 
-padres.forEach(padre => {
-  // padre.centro ES el nombre correcto del Centro Universitario
-  const children = hijosPorPadre.get(padre.centro) || [];
+  const hijosPorPadre = new Map<string, FacRow[]>();
 
-  if (children.length === 0) return;
-
-  // El padre se recalcula sumando sus hijos
-  const parentRow = emptyFacRow();
-  parentRow.centro = padre.centro;
-
-  children.forEach(child => {
-    FAC_COLUMNS.forEach(f => {
-      parentRow[f] += child[f];
+  hijos.forEach(h => {
+    if (!hijosPorPadre.has(h.centroOperacion)) {
+      hijosPorPadre.set(h.centroOperacion, []);
+    }
+    hijosPorPadre.get(h.centroOperacion)!.push({
+      centro: h.centro,
+      FCCO:  Number(h.FCCO  || 0),
+      FCEM:  Number(h.FCEM  || 0),
+      FCHS:  Number(h.FCHS  || 0),
+      FCSA:  Number(h.FCSA  || 0),
+      FEBPE: Number(h.FEBPE || 0),
+      FEDU:  Number(h.FEDU  || 0),
+      FING:  Number(h.FING  || 0),
+      total: Number(h.total || 0),
     });
-    parentRow.total += child.total;
   });
 
-  facTree.push({
-    parent: {
-      ...parentRow,
-      // 👇 el HIJO es el centro (ej: Engativá)
-      children: children.map(c => ({
-        ...c,
-        centro: c.centro,
-      })),
-    },
-  });
-});
+  const facTree: FacTreeNode[] = [];
 
-// 5️⃣ Total general (solo padres)
-const totalRow = emptyFacRow();
-totalRow.centro = "Total";
+  padres.forEach(padre => {
+    const children = hijosPorPadre.get(padre.centro) || [];
+    if (children.length === 0) return;
 
-facTree.forEach(({ parent }) => {
-  FAC_COLUMNS.forEach(f => {
-    totalRow[f] += parent[f];
+    const parentRow = emptyFacRow();
+    parentRow.centro = padre.centro;
+
+    children.forEach(child => {
+      FAC_COLUMNS.forEach(f => { parentRow[f] += child[f]; });
+      parentRow.total += child.total;
+    });
+
+    facTree.push({ parent: { ...parentRow, children } });
   });
-  totalRow.total += parent.total;
-});
+
+  const totalRow = emptyFacRow();
+  totalRow.centro = "Total";
+  facTree.forEach(({ parent }) => {
+    FAC_COLUMNS.forEach(f => { totalRow[f] += parent[f]; });
+    totalRow.total += parent.total;
+  });
+
   // ── AUSENTISMO ────────────────────────────────────────────────
 
   const totalAus = ausDes.reduce((s, d) => s + d.ausentes,   0);
@@ -459,7 +424,6 @@ facTree.forEach(({ parent }) => {
     if (!virtualTree.has(estado)) {
       virtualTree.set(estado, { estado, total: 0, niveles: new Map() });
     }
-
     const node = virtualTree.get(estado)!;
     node.total += valor;
     node.niveles.set(nivel, (node.niveles.get(nivel) || 0) + valor);
@@ -472,10 +436,15 @@ facTree.forEach(({ parent }) => {
   return (
     <div className="flex flex-col" style={{ gap: 8 }}>
 
-      {/* ROW 1 — KPI + FILTROS */}
-<div className="grid grid-cols-1 md:grid-cols-[120px_1fr]" style={{ gap: 8 }}>        <Panel title="Estudiantes Totales">
+      {/* ROW 1 — KPI + FILTROS — siempre visible */}
+      <div className="grid grid-cols-1 md:grid-cols-[120px_1fr]" style={{ gap: 8 }}>
+        <Panel title="Estudiantes Totales">
           <TableScroll>
-            <div style={{ fontSize: 32, fontWeight: 800, height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{
+              fontSize: 32, fontWeight: 800, height: "100%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "12px 0"
+            }}>
               {numFmt(totalEst)}
             </div>
           </TableScroll>
@@ -486,138 +455,149 @@ facTree.forEach(({ parent }) => {
         </Panel>
       </div>
 
-{/* ROW 2 — MODALIDAD + AUSENTISMO + VIRTUALES */}
-<div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 8, minHeight: 0 }}>
+      {/* Spinner mientras no hay datos */}
+      {!hayDatos && (
+        <div style={{ textAlign: "center", padding: "2rem", color: "#888", fontSize: 13 }}>
+          Cargando datos…
+        </div>
+      )}
 
-  <Panel title="Estudiantes por Modalidad">
-    <TableScroll>
-      <table style={tStyle}>
-        <THead cols={["Nivel Académico", "Nuevos", "Continuos", "Totales"]} />
-        <tbody>
-          {nivelRows.map((n, idx) => (
-            <TreeRow key={idx} label={`${idx + 1}. ${n.nivelAcademico}`} cols={[n.nuevos, n.continuos, n.totales]} defaultOpen>
-              {n.mods.map((m, j) => (
-                <TreeRow key={j} label={m.categoria} cols={[m.nuevos, m.continuos, m.totales]} depth={1} />
-              ))}
-            </TreeRow>
-          ))}
-          <TotalRow label="Total" cols={[totalNuevos, totalContinuos, totalTotales]} />
-        </tbody>
-      </table>
-    </TableScroll>
-  </Panel>
+      {/* ROW 2 y 3 — solo si hay datos reales */}
+      {hayDatos && (
+        <>
+          {/* ROW 2 — MODALIDAD + AUSENTISMO + VIRTUALES */}
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 8, minHeight: 0 }}>
 
-  <Panel title="Ausentismo y Deserción">
-    <TableScroll>
-      <table style={tStyle}>
-        <THead cols={["Modalidad", "Ausentes", "%", "Desertores", "%"]} />
-        <tbody>
-          {ausDes.map((d, i) => (
-            <tr key={i}>
-              <td style={{ padding: "3px 6px" }}>{i + 1}. {d.modalidad}</td>
-              <td style={{ textAlign: "right" }}>{numFmt(d.ausentes)}</td>
-              <td style={{ textAlign: "right", color: pctColor(d.pct_ausentes) }}>{d.pct_ausentes.toFixed(2)} %</td>
-              <td style={{ textAlign: "right" }}>{numFmt(d.desertores)}</td>
-              <td style={{ textAlign: "right", color: pctColor(d.pct_desertores) }}>{d.pct_desertores.toFixed(2)} %</td>
-            </tr>
-          ))}
-          <tr style={{ fontWeight: 700, backgroundColor: "#dce8fb" }}>
-            <td style={{ padding: "3px 6px", borderTop: "2px solid #1a3a6b" }}>Total</td>
-            <td style={{ textAlign: "right", borderTop: "2px solid #1a3a6b" }}>{numFmt(totalAus)}</td>
-            <td style={{ textAlign: "right", color: pctColor(pctAusTotal), borderTop: "2px solid #1a3a6b" }}>{pctAusTotal.toFixed(2)} %</td>
-            <td style={{ textAlign: "right", borderTop: "2px solid #1a3a6b" }}>{numFmt(totalDes)}</td>
-            <td style={{ textAlign: "right", color: pctColor(pctDesTotal), borderTop: "2px solid #1a3a6b" }}>{pctDesTotal.toFixed(2)} %</td>
-          </tr>
-        </tbody>
-      </table>
-    </TableScroll>
-  </Panel>
+            <Panel title="Estudiantes por Modalidad">
+              <TableScroll>
+                <table style={tStyle}>
+                  <THead cols={["Nivel Académico", "Nuevos", "Continuos", "Totales"]} />
+                  <tbody>
+                    {nivelRows.map((n, idx) => (
+                      <TreeRow key={idx} label={`${idx + 1}. ${n.nivelAcademico}`} cols={[n.nuevos, n.continuos, n.totales]} defaultOpen>
+                        {n.mods.map((m, j) => (
+                          <TreeRow key={j} label={m.categoria} cols={[m.nuevos, m.continuos, m.totales]} depth={1} />
+                        ))}
+                      </TreeRow>
+                    ))}
+                    <TotalRow label="Total" cols={[totalNuevos, totalContinuos, totalTotales]} />
+                  </tbody>
+                </table>
+              </TableScroll>
+            </Panel>
 
-  <Panel title="Estudiantes Virtuales">
-    <TableScroll>
-      <table style={tStyle}>
-        <THead cols={["Estado", "Cantidad"]} />
-        <tbody>
-          {virtualRows.map((node, i) => (
-            <TreeRow key={i} label={`${i + 1}. ${node.estado}`} cols={[node.total]} defaultOpen>
-              {Array.from(node.niveles.entries()).map(([nivel, valor], j) => (
-                <TreeRow key={j} label={nivel} cols={[valor]} depth={1} />
-              ))}
-            </TreeRow>
-          ))}
-          <TotalRow label="Total" cols={[virtualRows.reduce((s, r) => s + r.total, 0)]} />
-        </tbody>
-      </table>
-    </TableScroll>
-  </Panel>
+            <Panel title="Ausentismo y Deserción">
+              <TableScroll>
+                <table style={tStyle}>
+                  <THead cols={["Modalidad", "Ausentes", "%", "Desertores", "%"]} />
+                  <tbody>
+                    {ausDes.map((d, i) => (
+                      <tr key={i} style={{ fontSize: 11, backgroundColor: i % 2 === 0 ? "#f9fafe" : "#fff" }}>
+                        <td style={{ padding: "3px 6px", borderBottom: "1px solid #dde3ee" }}>{i + 1}. {d.modalidad}</td>
+                        <td style={{ textAlign: "right", padding: "3px 6px", borderBottom: "1px solid #dde3ee" }}>{numFmt(d.ausentes)}</td>
+                        <td style={{ textAlign: "right", padding: "3px 6px", color: pctColor(d.pct_ausentes), borderBottom: "1px solid #dde3ee" }}>{d.pct_ausentes.toFixed(2)} %</td>
+                        <td style={{ textAlign: "right", padding: "3px 6px", borderBottom: "1px solid #dde3ee" }}>{numFmt(d.desertores)}</td>
+                        <td style={{ textAlign: "right", padding: "3px 6px", color: pctColor(d.pct_desertores), borderBottom: "1px solid #dde3ee" }}>{d.pct_desertores.toFixed(2)} %</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: 700, backgroundColor: "#dce8fb" }}>
+                      <td style={{ padding: "3px 6px", borderTop: "2px solid #1a3a6b" }}>Total</td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", borderTop: "2px solid #1a3a6b" }}>{numFmt(totalAus)}</td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", color: pctColor(pctAusTotal), borderTop: "2px solid #1a3a6b" }}>{pctAusTotal.toFixed(2)} %</td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", borderTop: "2px solid #1a3a6b" }}>{numFmt(totalDes)}</td>
+                      <td style={{ textAlign: "right", padding: "3px 6px", color: pctColor(pctDesTotal), borderTop: "2px solid #1a3a6b" }}>{pctDesTotal.toFixed(2)} %</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </TableScroll>
+            </Panel>
 
-</div>
-      
+            <Panel title="Estudiantes Virtuales">
+              <TableScroll>
+                <table style={tStyle}>
+                  <THead cols={["Estado", "Cantidad"]} />
+                  <tbody>
+                    {virtualRows.map((node, i) => (
+                      <TreeRow key={i} label={`${i + 1}. ${node.estado}`} cols={[node.total]} defaultOpen>
+                        {Array.from(node.niveles.entries()).map(([nivel, valor], j) => (
+                          <TreeRow key={j} label={nivel} cols={[valor]} depth={1} />
+                        ))}
+                      </TreeRow>
+                    ))}
+                    <TotalRow label="Total" cols={[virtualRows.reduce((s, r) => s + r.total, 0)]} />
+                  </tbody>
+                </table>
+              </TableScroll>
+            </Panel>
 
-      {/* ROW 3 — CENTROS + FACULTADES */}
-<div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 8, minHeight: 0 }}>
+          </div>
 
+          {/* ROW 3 — CENTROS + FACULTADES */}
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 8, minHeight: 0 }}>
 
-        <Panel title="Estudiantes por Centro Universitario y Modalidad">
-          <TableScroll>
-            <div style={{ maxHeight: "375px", overflowY: "auto" }}>
-              <table style={tStyle}>
-                <THead cols={["Centro Universitario", "Nuevos", "Continuos", "Totales"]} />
-                <tbody>
-                  {centros.map((c, i) => (
-                    <TreeRow key={i} label={c.nombre} cols={[c.nuevos, c.continuos, c.total]} defaultOpen>
-                      {c.operaciones.map((o, j) => (
-                        <TreeRow key={j} label={"- " + o.nombre} cols={[o.nuevos, o.continuos, o.total]} depth={1} defaultOpen>
-                          {o.mods.map((m, k) => (
-                            <TreeRow key={k} label={m.nombre} cols={[m.nuevos, m.continuos, m.total]} depth={2} defaultOpen />
+            <Panel title="Estudiantes por Centro Universitario y Modalidad">
+              <TableScroll>
+                <div style={{ maxHeight: "375px", overflowY: "auto" }}>
+                  <table style={tStyle}>
+                    <THead cols={["Centro Universitario", "Nuevos", "Continuos", "Totales"]} />
+                    <tbody>
+                      {centros.map((c, i) => (
+                        <TreeRow key={i} label={c.nombre} cols={[c.nuevos, c.continuos, c.total]} defaultOpen>
+                          {c.operaciones.map((o, j) => (
+                            <TreeRow key={j} label={"- " + o.nombre} cols={[o.nuevos, o.continuos, o.total]} depth={1} defaultOpen>
+                              {o.mods.map((m, k) => (
+                                <TreeRow key={k} label={m.nombre} cols={[m.nuevos, m.continuos, m.total]} depth={2} defaultOpen />
+                              ))}
+                            </TreeRow>
                           ))}
                         </TreeRow>
                       ))}
-                    </TreeRow>
-                  ))}
-                  <TotalRow label="Total" cols={[totalCentroNuevos, totalCentroCont, totalCentroTotal]} />
-                </tbody>
-              </table>
-            </div>
-          </TableScroll>
-        </Panel>
+                      <TotalRow label="Total" cols={[totalCentroNuevos, totalCentroCont, totalCentroTotal]} />
+                    </tbody>
+                  </table>
+                </div>
+              </TableScroll>
+            </Panel>
 
-<Panel title="Estudiantes por Facultad">
-  <TableScroll>
-    <div style={{ maxHeight: "375px", overflowY: "auto" }}>
-      <table style={tStyle}>
-        <THead cols={["Centro Universitario", ...FAC_COLUMNS, "Total"]} />
-        <tbody>
-          {facTree.map(({ parent }, i) => (
-            <TreeRow
-              key={i}
-              label={parent.centro}
-              cols={[...FAC_COLUMNS.map(f => parent[f]), parent.total]}
-              defaultOpen
-            >
-              {parent.children.map((child, j) => (
-                <TreeRow
-                  key={j}
-                  label={child.centro}
-                  depth={1}
-                  cols={[...FAC_COLUMNS.map(f => child[f]), child.total]}
-                />
-              ))}
-            </TreeRow>
-          ))}
-        </tbody>
-        <tfoot>
-          <TotalRow
-            label="Total"
-            cols={[...FAC_COLUMNS.map(f => totalRow[f]), totalRow.total]}
-          />
-        </tfoot>
-      </table>
-    </div>
-  </TableScroll>
-</Panel>
+            <Panel title="Estudiantes por Facultad">
+              <TableScroll>
+                <div style={{ maxHeight: "375px", overflowY: "auto" }}>
+                  <table style={tStyle}>
+                    <THead cols={["Centro Universitario", ...FAC_COLUMNS, "Total"]} />
+                    <tbody>
+                      {facTree.map(({ parent }, i) => (
+                        <TreeRow
+                          key={i}
+                          label={parent.centro}
+                          cols={[...FAC_COLUMNS.map(f => parent[f]), parent.total]}
+                          defaultOpen
+                        >
+                          {parent.children.map((child, j) => (
+                            <TreeRow
+                              key={j}
+                              label={child.centro}
+                              depth={1}
+                              cols={[...FAC_COLUMNS.map(f => child[f]), child.total]}
+                            />
+                          ))}
+                        </TreeRow>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <TotalRow
+                        label="Total"
+                        cols={[...FAC_COLUMNS.map(f => totalRow[f]), totalRow.total]}
+                      />
+                    </tfoot>
+                  </table>
+                </div>
+              </TableScroll>
+            </Panel>
 
-      </div>
+          </div>
+        </>
+      )}
+
     </div>
   );
 }
