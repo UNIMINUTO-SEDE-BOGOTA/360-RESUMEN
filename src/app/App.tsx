@@ -1035,10 +1035,11 @@ console.log("All rows:", escuelaRows);
                           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
                             {/* COLUMNA IZQUIERDA: tablas */}
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-3 w-full lg:w-80 lg:flex-shrink-0">
 
                               {/* TABLA 80% */}
-                              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden w-full min-w-0">
+
                                 <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                   Programas que contienen el 80% de los estudiantes
                                 </div>
