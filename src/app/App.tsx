@@ -37,8 +37,8 @@ const ComparativosView  = lazy(() => import("./components/ComparativosView"));
 const OfertaView        = lazy(() => import("./components/OfertaView").then(m => ({ default: m.OfertaView })));
 
 // ── Hooks personalizados ──
-import { useIsMobile }   from "./hooks/useIsMobile";
-import { useDebounce }   from "./hooks/useDebounce";
+import { useIsMobile }    from "./hooks/useIsMobile";
+import { useDebounce }    from "./hooks/useDebounce";
 import { useVirtualRows } from "./hooks/useVirtualRows";
 
 // ==================== CONFIG ====================
@@ -48,6 +48,9 @@ const API_URL =
     (import.meta as any).env &&
     (import.meta as any).env.VITE_API_URL) ||
   "https://three60-resumen-backend.onrender.com";
+
+// ── Año por defecto garantizado ──
+const DEFAULT_YEAR = "2026";
 
 // ── Cache de combos en sessionStorage ──
 const COMBOS_CACHE_KEY = "filtros_base_v2";
@@ -169,22 +172,24 @@ function App() {
   const fechaCorte = "20 de marzo de 2026";
 
   // ── Navegación ──
-  const [activeTab, setActiveTab]           = useState("estudiantes");
+  const [activeTab, setActiveTab]                   = useState("estudiantes");
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
-  const [subViewPareto, setSubViewPareto]   = useState<"ejecutado" | "proyectado">("ejecutado");
+  const [subViewPareto, setSubViewPareto]           = useState<"ejecutado" | "proyectado">("ejecutado");
 
   // ── Selecciones de filtros ──
-  const [selYears,           setSelYears]           = useState<string[]>([]);
-  const [selModalidades,     setSelModalidades]     = useState<string[]>([]);
-  const [selNiveles,         setSelNiveles]         = useState<string[]>([]);
-  const [selPeriodos,        setSelPeriodos]        = useState<string[]>([]);
-  const [selCentros,         setSelCentros]         = useState<string[]>([]);
-  const [selNivelFormacion,  setSelNivelFormacion]  = useState<string[]>([]);
-  const [selProgramas,       setSelProgramas]       = useState<string[]>([]);
-  const [selPeriodicidades,  setSelPeriodicidades]  = useState<string[]>([]);
-  const [selNivelesFormacion,setSelNivelesFormacion]= useState<string[]>([]);
-  const [selSedes,           setSelSedes]           = useState<string[]>([]);
-  const [selFacultades,      setSelFacultades]      = useState<string[]>([]);
+  // FIX 1: inicializar con DEFAULT_YEAR para que la primera petición
+  //        ya vaya filtrada y no se muestren 0 → total → 2026.
+  const [selYears,            setSelYears]            = useState<string[]>([DEFAULT_YEAR]);
+  const [selModalidades,      setSelModalidades]      = useState<string[]>([]);
+  const [selNiveles,          setSelNiveles]          = useState<string[]>([]);
+  const [selPeriodos,         setSelPeriodos]         = useState<string[]>([]);
+  const [selCentros,          setSelCentros]          = useState<string[]>([]);
+  const [selNivelFormacion,   setSelNivelFormacion]   = useState<string[]>([]);
+  const [selProgramas,        setSelProgramas]        = useState<string[]>([]);
+  const [selPeriodicidades,   setSelPeriodicidades]   = useState<string[]>([]);
+  const [selNivelesFormacion, setSelNivelesFormacion] = useState<string[]>([]);
+  const [selSedes,            setSelSedes]            = useState<string[]>([]);
+  const [selFacultades,       setSelFacultades]       = useState<string[]>([]);
 
   // ── Datos del dashboard ──
   const [stats,              setStats]              = useState<StatsData | null>(null);
@@ -215,12 +220,12 @@ function App() {
   // ==================== PARSED YEARS / PERIODOS ====================
 
   const { parsedYears, parsedPeriodos } = useMemo(() => {
-    const years: string[]   = [];
+    const years: string[]    = [];
     const periodos: string[] = [];
     selPeriodos.forEach((p) => {
       if (p.includes("-")) {
-        const idx    = p.indexOf("-");
-        const year   = p.slice(0, idx);
+        const idx     = p.indexOf("-");
+        const year    = p.slice(0, idx);
         const periodo = p.slice(idx + 1);
         if (/^\d{4}$/.test(year)) years.push(year);
         if (periodo) periodos.push(periodo);
@@ -229,14 +234,12 @@ function App() {
       }
     });
     return {
-      parsedYears:   [...new Set(years)],
+      parsedYears:    [...new Set(years)],
       parsedPeriodos: [...new Set(periodos)],
     };
   }, [selPeriodos]);
 
   // ==================== DEBOUNCE FILTROS ====================
-  // Agrupa todos los filtros en un objeto y lo debouncéa para evitar
-  // múltiples llamadas seguidas al cambiar varios combos.
 
   const rawFilters = useMemo(
     () => ({
@@ -276,11 +279,15 @@ function App() {
     })();
   }, []);
 
-  // 2) Selección inicial: el año más reciente
+  // 2) Selección inicial: el año más reciente que devuelva la API.
+  //    Si el DEFAULT_YEAR ya está incluido en la lista, no se hace nada
+  //    (el estado ya tiene ese valor y no se dispara un re-fetch).
   useEffect(() => {
     if (!base.years || base.years.length === 0) return;
     setSelYears((prev) => {
+      // Si todos los años seleccionados siguen siendo válidos, no tocar nada
       if (prev.length > 0 && prev.every((y) => base.years.includes(y))) return prev;
+      // Si no, usar el primero de la lista (el más reciente)
       return [base.years[0]];
     });
   }, [base.years]);
@@ -289,7 +296,6 @@ function App() {
   useEffect(() => {
     (async () => {
       try {
-        // ── Intentar caché primero ──
         const cached = sessionStorage.getItem(COMBOS_CACHE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
@@ -305,11 +311,11 @@ function App() {
             a.localeCompare(b, "es", { sensitivity: "base" })
           );
 
-        const periodicidades     = uniq("periodicidad");
-        const nivelesFormacion   = uniq("nivelFormacion");
-        const facultades         = uniq("facultad");
-        const sedes              = uniq("rectoria");
-        const modalidades        = uniq("categoria");
+        const periodicidades   = uniq("periodicidad");
+        const nivelesFormacion = uniq("nivelFormacion");
+        const facultades       = uniq("facultad");
+        const sedes            = uniq("rectoria");
+        const modalidades      = uniq("categoria");
 
         const periodosCombinados = [
           ...new Set(
@@ -354,7 +360,6 @@ function App() {
           _programas: programasOpts,
         };
 
-        // ── Guardar en caché ──
         try {
           sessionStorage.setItem(COMBOS_CACHE_KEY, JSON.stringify(opciones));
         } catch (_) {
@@ -385,7 +390,6 @@ function App() {
     [paretoData]
   );
 
-  // En móvil: limitar puntos del chart para no congelar SVG
   const chartDataLimited = useMemo(() => {
     const MAX = isMobile ? 20 : dataChart.length;
     return dataChart.slice(0, MAX);
@@ -407,9 +411,9 @@ function App() {
     const total = arr.reduce((acc, cur) => acc + cur.valor, 0);
     let acumulado = 0;
     arr.forEach((item) => {
-      acumulado      += item.valor;
-      item.acumulado  = acumulado;
-      item.porcentaje = total ? (acumulado / total) * 100 : 0;
+      acumulado       += item.valor;
+      item.acumulado   = acumulado;
+      item.porcentaje  = total ? (acumulado / total) * 100 : 0;
     });
 
     const top80: typeof arr = [];
@@ -428,18 +432,20 @@ function App() {
   }, []);
 
   const loadPareto = useCallback(async () => {
+    // FIX 2: no cargar pareto sin año seleccionado
+    if (!selYears || selYears.length === 0) return;
     try {
       const filters = {
-        years:           parsedYears.length ? parsedYears : selYears,
-        modalidades:     selModalidades,
-        niveles:         selNiveles,
+        years:            parsedYears.length ? parsedYears : selYears,
+        modalidades:      selModalidades,
+        niveles:          selNiveles,
         nivelesFormacion: selNivelFormacion.length ? selNivelFormacion : undefined,
-        periodos:        parsedPeriodos,
-        centros:         selCentros,
-        programas:       selProgramas,
-        periodicidades:  selPeriodicidades,
-        sedes:           selSedes,
-        facultades:      selFacultades,
+        periodos:         parsedPeriodos,
+        centros:          selCentros,
+        programas:        selProgramas,
+        periodicidades:   selPeriodicidades,
+        sedes:            selSedes,
+        facultades:       selFacultades,
       };
       const res = await fetchTableMulti(filters);
       buildPareto(res.rows);
@@ -455,12 +461,15 @@ function App() {
   // ==================== DASHBOARD ====================
 
   const loadDashboard = useCallback(async () => {
+    // FIX 3: nunca cargar el dashboard sin año — evita el flash 0 → total → 2026
+    if (!selYears || selYears.length === 0) return;
+
     const currentReqId = ++reqId.current;
     setIsLoading(true);
     setErr(null);
 
     try {
-      const res  = await fetchTableMulti({
+      const res = await fetchTableMulti({
         years:      selYears,
         modalidades: selModalidades,
         niveles:    selNiveles,
@@ -469,7 +478,6 @@ function App() {
         pageSize:   10000,
       });
 
-      // Ignorar respuesta si llegó otra petición más nueva
       if (currentReqId !== reqId.current) return;
 
       const rows = res.rows;
@@ -509,9 +517,9 @@ function App() {
           };
         }
 
-        const nuevos    = r.nuevos   ?? 0;
+        const nuevos    = r.nuevos    ?? 0;
         const continuos = r.continuos ?? 0;
-        const totales   = r.totales  ?? 0;
+        const totales   = r.totales   ?? 0;
 
         centroMap[centroUniversitario].nuevos    += nuevos;
         centroMap[centroUniversitario].continuos += continuos;
@@ -546,10 +554,10 @@ function App() {
             continuos:  c.continuos,
             total:      c.total,
             operaciones: Object.values(c.operaciones).map((o: any) => ({
-              nombre:    o.nombre,
-              nuevos:    o.nuevos,
-              continuos: o.continuos,
-              total:     o.total,
+              nombre:     o.nombre,
+              nuevos:     o.nuevos,
+              continuos:  o.continuos,
+              total:      o.total,
               modalidades: Object.values(o.modalidades),
             })),
           }))
@@ -572,8 +580,10 @@ function App() {
         const valor = r.totales ?? 0;
         if (!fac || valor === 0) return;
 
-        if (!facMap[centroUniversitario])                      facMap[centroUniversitario] = {};
-        if (!facMap[centroUniversitario][centroOperacion])     facMap[centroUniversitario][centroOperacion] = { FCCO: 0, FCEM: 0, FCHS: 0, FCSA: 0, FEBPE: 0, FEDU: 0, FING: 0 };
+        if (!facMap[centroUniversitario])
+          facMap[centroUniversitario] = {};
+        if (!facMap[centroUniversitario][centroOperacion])
+          facMap[centroUniversitario][centroOperacion] = { FCCO: 0, FCEM: 0, FCHS: 0, FCSA: 0, FEBPE: 0, FEDU: 0, FING: 0 };
 
         facMap[centroUniversitario][centroOperacion][fac] += valor;
       });
@@ -604,9 +614,9 @@ function App() {
           const facs     = facMap[centroUniversitario][centroOperacion];
           const childRow: any = { centro: centroOperacion, centroOperacion: centroUniversitario, total: 0, ...facs };
           FAC_COLUMNS.forEach((c) => {
-            childRow.total     += facs[c];
-            parentRow[c]       += facs[c];
-            totalGeneral[c]    += facs[c];
+            childRow.total  += facs[c];
+            parentRow[c]    += facs[c];
+            totalGeneral[c] += facs[c];
           });
           hijosRows.push(childRow);
         }
@@ -617,8 +627,8 @@ function App() {
 
       const totalRow: any = { centro: "Total", centroOperacion: "", total: 0 };
       FAC_COLUMNS.forEach((c) => {
-        totalRow[c]     = totalGeneral[c];
-        totalRow.total += totalGeneral[c];
+        totalRow[c]      = totalGeneral[c];
+        totalRow.total  += totalGeneral[c];
       });
       escuelaRows.push(totalRow);
       setByEscuela(escuelaRows);
@@ -628,9 +638,9 @@ function App() {
       rows.forEach((r: any) => {
         const mod = mapModalidad(r.categoria);
         if (!ausMap[mod]) ausMap[mod] = { aus: 0, des: 0, total: 0 };
-        const nuevos    = r.nuevos   ?? 0;
+        const nuevos    = r.nuevos    ?? 0;
         const continuos = r.continuos ?? 0;
-        const totales   = r.totales  ?? 0;
+        const totales   = r.totales   ?? 0;
         ausMap[mod].aus   += Math.max(nuevos - continuos, 0);
         ausMap[mod].des   += Math.max(totales - continuos, 0);
         ausMap[mod].total += totales;
@@ -665,10 +675,10 @@ function App() {
 
       // ── KPIs ──
       setStats({
-        estudiantes:  rows.reduce((a: number, b: any) => a + (b.totales ?? 0), 0),
-        centros:      new Set(rows.map((r: any) => r.centro)).size,
-        modalidades:  new Set(rows.map((r: any) => r.categoria)).size,
-        programas:    new Set(rows.map((r: any) => r.programa)).size,
+        estudiantes: rows.reduce((a: number, b: any) => a + (b.totales ?? 0), 0),
+        centros:     new Set(rows.map((r: any) => r.centro)).size,
+        modalidades: new Set(rows.map((r: any) => r.categoria)).size,
+        programas:   new Set(rows.map((r: any) => r.programa)).size,
       });
 
       // ── Tendencia por año ──
@@ -689,7 +699,13 @@ function App() {
       rows.forEach((r: any) => {
         const key = `${r.nivelAcademico}|${r.categoria}`;
         if (!modalMap[key]) {
-          modalMap[key] = { nivelAcademico: r.nivelAcademico, categoria: r.categoria, nuevos: 0, continuos: 0, totales: 0 };
+          modalMap[key] = {
+            nivelAcademico: r.nivelAcademico,
+            categoria:      r.categoria,
+            nuevos:         0,
+            continuos:      0,
+            totales:        0,
+          };
         }
         modalMap[key].nuevos    += r.nuevos    ?? 0;
         modalMap[key].continuos += r.continuos ?? 0;
@@ -707,14 +723,16 @@ function App() {
   }, [selYears, selModalidades, selNiveles, selPeriodos, selCentros, parsedPeriodos]);
 
   const forceRefresh = async () => {
-    // Limpiar caché de combos para forzar recarga
     sessionStorage.removeItem(COMBOS_CACHE_KEY);
     await fetch(`${API_URL}/api/cache/clear`, { method: "POST" });
     loadDashboard();
   };
 
   // ── Disparar carga con filtros debounceados ──
+  // FIX 4: guard — no disparar si todavía no hay año seleccionado
   useEffect(() => {
+    if (!debouncedFilters.selYears || debouncedFilters.selYears.length === 0) return;
+
     if (debouncedFilters.subViewEstudiantes === "pareto") {
       loadPareto();
     } else {
@@ -725,7 +743,7 @@ function App() {
   // ==================== ACCIONES ====================
 
   const clearAll = useCallback(() => {
-    setSelYears([base.years[0] ?? "2026"]);
+    setSelYears([base.years[0] ?? DEFAULT_YEAR]);
     setSelModalidades([]);
     setSelNiveles([]);
     setSelPeriodos([]);
@@ -870,11 +888,11 @@ function App() {
                           niveles={base.niveles.map((n) => ({ label: n, value: n }))}
                           periodos={base.periodos.map((p) => ({ label: p, value: p }))}
                           centros={base.centros.map((c) => ({ label: c, value: c }))}
-                          selYears={selYears}         setSelYears={setSelYears}
+                          selYears={selYears}             setSelYears={setSelYears}
                           selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                          selNiveles={selNiveles}     setSelNiveles={setSelNiveles}
-                          selPeriodos={selPeriodos}   setSelPeriodos={setSelPeriodos}
-                          selCentros={selCentros}     setSelCentros={setSelCentros}
+                          selNiveles={selNiveles}         setSelNiveles={setSelNiveles}
+                          selPeriodos={selPeriodos}       setSelPeriodos={setSelPeriodos}
+                          selCentros={selCentros}         setSelCentros={setSelCentros}
                           clearAll={clearAll}
                         />
                       }
@@ -894,17 +912,17 @@ function App() {
                           pareto80={pareto80}
                           pareto20={pareto20}
                           dataChart={dataChart}
-                          selYears={selYears}                   setSelYears={setSelYears}
-                          selModalidades={selModalidades}       setSelModalidades={setSelModalidades}
-                          selNivelFormacion={selNivelFormacion} setSelNivelFormacion={setSelNivelFormacion}
-                          selPeriodos={selPeriodos}             setSelPeriodos={setSelPeriodos}
-                          selCentros={selCentros}               setSelCentros={setSelCentros}
-                          selProgramas={selProgramas}           setSelProgramas={setSelProgramas}
-                          selPeriodicidades={selPeriodicidades} setSelPeriodicidades={setSelPeriodicidades}
-                          selNiveles={selNiveles}               setSelNiveles={setSelNiveles}
+                          selYears={selYears}                       setSelYears={setSelYears}
+                          selModalidades={selModalidades}           setSelModalidades={setSelModalidades}
+                          selNivelFormacion={selNivelFormacion}     setSelNivelFormacion={setSelNivelFormacion}
+                          selPeriodos={selPeriodos}                 setSelPeriodos={setSelPeriodos}
+                          selCentros={selCentros}                   setSelCentros={setSelCentros}
+                          selProgramas={selProgramas}               setSelProgramas={setSelProgramas}
+                          selPeriodicidades={selPeriodicidades}     setSelPeriodicidades={setSelPeriodicidades}
+                          selNiveles={selNiveles}                   setSelNiveles={setSelNiveles}
                           selNivelesFormacion={selNivelesFormacion} setSelNivelesFormacion={setSelNivelesFormacion}
-                          selSedes={selSedes}                   setSelSedes={setSelSedes}
-                          selFacultades={selFacultades}         setSelFacultades={setSelFacultades}
+                          selSedes={selSedes}                       setSelSedes={setSelSedes}
+                          selFacultades={selFacultades}             setSelFacultades={setSelFacultades}
                           clearAll={clearAll}
                           onVolver={() => setSubViewEstudiantes("dashboard")}
                           onIrEjecutado={() => setSubViewPareto("ejecutado")}
@@ -948,10 +966,10 @@ function App() {
                               programas={listaProgramas}
                               selProgramas={selProgramas}
                               setSelProgramas={setSelProgramas}
-                              selYears={selYears}         setSelYears={setSelYears}
+                              selYears={selYears}             setSelYears={setSelYears}
                               selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                              selPeriodos={selPeriodos}   setSelPeriodos={setSelPeriodos}
-                              selCentros={selCentros}     setSelCentros={setSelCentros}
+                              selPeriodos={selPeriodos}       setSelPeriodos={setSelPeriodos}
+                              selCentros={selCentros}         setSelCentros={setSelCentros}
                               clearAll={clearAll}
                             />
                           </div>
@@ -962,7 +980,7 @@ function App() {
                             {/* COLUMNA IZQUIERDA: tablas virtualizadas */}
                             <div className="flex flex-col gap-3">
 
-                              {/* TABLA 80% — virtualizada */}
+                              {/* TABLA 80% */}
                               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                                 <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                   Programas que contienen el 80% de los estudiantes
@@ -984,9 +1002,7 @@ function App() {
                                       <tr style={{ height: vPareto80.paddingTop }} />
                                       {vPareto80.visible.map((p, i) => (
                                         <tr key={i} className="border-t border-slate-100">
-                                          <td className="px-2 py-1 text-slate-400">
-                                            {pareto80.indexOf(p) + 1}
-                                          </td>
+                                          <td className="px-2 py-1 text-slate-400">{pareto80.indexOf(p) + 1}</td>
                                           <td className="px-2 py-1 text-slate-700">{p.programa}</td>
                                           <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
                                         </tr>
@@ -1006,7 +1022,7 @@ function App() {
                                 </div>
                               </div>
 
-                              {/* TABLA 20% — virtualizada */}
+                              {/* TABLA 20% */}
                               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                                 <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                   Programas que contienen el 20% de los estudiantes
@@ -1028,9 +1044,7 @@ function App() {
                                       <tr style={{ height: vPareto20.paddingTop }} />
                                       {vPareto20.visible.map((p, i) => (
                                         <tr key={i} className="border-t border-slate-100">
-                                          <td className="px-2 py-1 text-slate-400">
-                                            {pareto20.indexOf(p) + 1}
-                                          </td>
+                                          <td className="px-2 py-1 text-slate-400">{pareto20.indexOf(p) + 1}</td>
                                           <td className="px-2 py-1 text-slate-700">{p.programa}</td>
                                           <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
                                         </tr>
@@ -1052,7 +1066,7 @@ function App() {
 
                             </div>
 
-                            {/* GRÁFICA — limitada en móvil */}
+                            {/* GRÁFICA */}
                             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                               <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                 Pareto de programas en relación a estudiantes nuevos
@@ -1067,9 +1081,9 @@ function App() {
                                 <div className="overflow-x-auto">
                                   <div
                                     style={{
-                                      minWidth:  isMobile ? 600 : undefined,
-                                      width:     isMobile ? undefined : "100%",
-                                      height:    isMobile ? 350 : 500,
+                                      minWidth: isMobile ? 600 : undefined,
+                                      width:    isMobile ? undefined : "100%",
+                                      height:   isMobile ? 350 : 500,
                                     }}
                                   >
                                     <ResponsiveContainer width="100%" height="100%">
@@ -1106,7 +1120,7 @@ function App() {
                                           wrapperStyle={{ fontSize: 11, paddingBottom: 4, cursor: "pointer" }}
                                           formatter={(value) => {
                                             if (value === "porcentaje") return "Pareto Nuevos";
-                                            if (value === "valor")     return "Estudiantes Nuevos";
+                                            if (value === "valor")      return "Estudiantes Nuevos";
                                             return value;
                                           }}
                                           onClick={(e) => {
@@ -1117,7 +1131,7 @@ function App() {
 
                                         <Tooltip
                                           formatter={(value, name) => {
-                                            if (name === "valor")     return [`${Number(value).toLocaleString()}`, "Estudiantes Nuevos"];
+                                            if (name === "valor")      return [`${Number(value).toLocaleString()}`, "Estudiantes Nuevos"];
                                             if (name === "porcentaje") return [`${Number(value).toFixed(2)}%`, "Pareto Nuevos"];
                                             return [value, name];
                                           }}
