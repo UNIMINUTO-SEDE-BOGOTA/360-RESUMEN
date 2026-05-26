@@ -236,79 +236,79 @@ function App() {
   const [selYears, setSelYears] = useState<string[]>(["2026"]);
 
 // 3) Resto de combos: modalidades, períodos combinados, centros, etc.
-useEffect(() => {
-  (async () => {
-    try {
-      const all = await fetchAzureData();
-
-      const periodicidades = [...new Set(
-        all.map(d => (d.periodicidad ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-      const nivelesFormacion = [...new Set(
-        all.map(d => (d.nivelFormacion ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-      const facultades = [...new Set(
-        all.map(d => (d.facultad ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-      const periodosCombinados = [...new Set(
-        all
-          .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : "")
-          .filter(Boolean)
-      )].sort((a, b) => b.localeCompare(a));
-
-      const sedes = [...new Set(
-        all.map(d => (d.rectoria ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-      const programas = [...new Set(
-        all.map(d => (d.programa ?? d.siglasPrograma ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-      setListaProgramas(programas.map(p => ({ label: p, value: p })));
-
-      const modalidades = [...new Set(
-        all.map(d => (d.categoria ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-      const niveles = [...new Set(
-        all.map(d => normalizeNivel(d.nivelAcademico))
-      )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-      const centros = [...new Set(
-        all.map(d => (d.centro ?? "").toString().trim()).filter(Boolean)
-      )].sort((a, b) => {
-        const indexA = ORDEN_CENTROS.indexOf(a);
-        const indexB = ORDEN_CENTROS.indexOf(b);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return a.localeCompare(b, "es", { sensitivity: "base" });
-      });
-
-      setSelNiveles(prev =>
-        prev.map(normalizeNivel).filter(v => ["Pregrado", "Posgrado"].includes(v))
-      );
-
-      setBase(prev => ({
-        ...prev,
-        modalidades,
-        niveles,
-        periodos: periodosCombinados,
-        centros,
-        periodicidades,
-        nivelesFormacion,
-        facultades,
-        sedes
-      }));
-
-    } catch (e) {
-      console.error("Error cargando combos:", e);
-    }
-  })();
-}, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const all = await fetchAzureData();
+  
+        const periodicidades = [...new Set(
+          all.map(d => (d.periodicidad ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  
+        const nivelesFormacion = [...new Set(
+          all.map(d => (d.nivelFormacion ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  
+        const facultades = [...new Set(
+          all.map(d => (d.facultad ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  
+        const periodosCombinados = [...new Set(
+          all
+            .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : "")
+            .filter(Boolean)
+        )].sort((a, b) => b.localeCompare(a));
+  
+        const sedes = [...new Set(
+          all.map(d => (d.rectoria ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  
+        const programas = [...new Set(
+          all.map(d => (d.programa ?? d.siglasPrograma ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  
+        setListaProgramas(programas.map(p => ({ label: p, value: p })));
+  
+        const modalidades = [...new Set(
+          all.map(d => (d.categoria ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  
+        const niveles = [...new Set(
+          all.map(d => normalizeNivel(d.nivelAcademico))
+        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  
+        const centros = [...new Set(
+          all.map(d => (d.centro ?? "").toString().trim()).filter(Boolean)
+        )].sort((a, b) => {
+          const indexA = ORDEN_CENTROS.indexOf(a);
+          const indexB = ORDEN_CENTROS.indexOf(b);
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
+          return a.localeCompare(b, "es", { sensitivity: "base" });
+        });
+  
+        setSelNiveles(prev =>
+          prev.map(normalizeNivel).filter(v => ["Pregrado", "Posgrado"].includes(v))
+        );
+  
+        setBase(prev => ({
+          ...prev,
+          modalidades,
+          niveles,
+          periodos: periodosCombinados,
+          centros,
+          periodicidades,
+          nivelesFormacion,
+          facultades,
+          sedes
+        }));
+  
+      } catch (e) {
+        console.error("Error cargando combos:", e);
+      }
+    })();
+  }, []);
 
   // Reset subview al cambiar de tab
   useEffect(() => {
