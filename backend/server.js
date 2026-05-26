@@ -32,23 +32,26 @@ const config = {
 };
 
 let pool;
+let dbConnected = false; // ← nuevo flag global
 
 async function connectDB() {
   try {
     pool = await sql.connect(config);
+    dbConnected = true;
     console.log('✅ Conectado exitosamente a Azure SQL Database');
     console.log(`   Servidor: ${config.server}`);
     console.log(`   Base de datos: ${config.database}`);
   } catch (err) {
+    dbConnected = false;
     console.error('❌ Error al conectar a Azure SQL:', getErrorMessage(err));
-    process.exit(1);
+    // NO hacemos process.exit(1) para que el servidor siga vivo con cache
   }
 }
 
 // ==================== HELPERS ====================
 
 const cache = new Map();
-const CACHE_TTL = 1000 * 60 * 30; // 30 minutos
+const CACHE_TTL = 1000 * 60 * 60; // 1 hora (antes 30 min)
 
 const normalize = (s = '') =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
@@ -95,7 +98,7 @@ function sendPaused(res) {
   });
 }
 
-// Filtro de Rectoría tolerante a tildes y variantes (usa literales, no parámetros SQL)
+// Filtro de Rectoría tolerante a tildes y variantes
 function buildRectoriaFilter() {
   return `
     LOWER(LTRIM(RTRIM(
@@ -106,45 +109,95 @@ function buildRectoriaFilter() {
   `;
 }
 
+// ── Verifica que pool esté disponible antes de usarlo ──────────────
+function poolReady() {
+  return dbConnected && pool && pool.connected;
+}
+
+// ── Reintenta conexión si pool está caído ─────────────────────────
+async function ensurePool() {
+  if (!poolReady()) {
+    console.log('🔄 Reintentando conexión a Azure SQL...');
+    try {
+      if (pool) {
+        try { await pool.close(); } catch {}
+      }
+      pool = await sql.connect(config);
+      dbConnected = true;
+      console.log('✅ Reconexión exitosa');
+    } catch (err) {
+      dbConnected = false;
+      throw err;
+    }
+  }
+}
+
 // ==================== ENDPOINTS ====================
 
 // Limpiar cache manualmente
 app.post('/api/cache/clear', (_req, res) => {
   cache.clear();
-  res.json({ message: 'Cache limpiado correctamente' });
+  res.json({ message: 'Cache limpiado correctamente', entries: 0 });
+});
+
+// Info del cache
+app.get('/api/cache/info', (_req, res) => {
+  res.json({
+    entries: cache.size,
+    keys: [...cache.keys()],
+    dbConnected,
+  });
 });
 
 // Salud rápida
 app.get('/api/health', async (_req, res) => {
   try {
+    await ensurePool();
     await pool.request().query('SELECT 1 AS ok');
     res.json({ status: 'ok', connected: true, source: 'AZURE' });
   } catch (err) {
     if (isPausedDbError(err)) return sendPaused(res);
-    res.status(500).json({ error: getErrorMessage(err) });
+    // Devuelve degraded en vez de 500 para que el front sepa que está offline
+    res.status(200).json({ status: 'degraded', connected: false, cached: cache.size > 0, error: getErrorMessage(err) });
   }
 });
 
 // Status amigable
 app.get('/api/status', async (_req, res) => {
   try {
+    await ensurePool();
     const r = await pool.request().query('SELECT DB_NAME() AS db, SYSDATETIMEOFFSET() AS now');
     res.json({ paused: false, source: 'AZURE', info: r.recordset?.[0] });
   } catch (err) {
     if (isPausedDbError(err)) return sendPaused(res);
-    res.status(500).json({ paused: null, error: getErrorMessage(err) });
+    res.status(200).json({ paused: null, connected: false, cached: cache.size > 0, error: getErrorMessage(err) });
   }
 });
 
 // Tablas
 app.get('/api/tablas', async (_req, res) => {
+  const cacheKey = 'tablas_list';
   try {
+    // ── CACHE FIRST ──
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟢 Cache usado (/api/tablas)');
+      return res.json(cached);
+    }
+
+    await ensurePool();
     const result = await pool.request().query(`
       SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
       WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME
     `);
+    setCache(cacheKey, result.recordset);
     res.json(result.recordset);
   } catch (err) {
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟡 BD caída → usando cache (/api/tablas)');
+      return res.json(cached);
+    }
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: getErrorMessage(err) });
   }
@@ -152,8 +205,13 @@ app.get('/api/tablas', async (_req, res) => {
 
 // Estructura de tabla
 app.get('/api/tablas/:nombre/estructura', async (req, res) => {
+  const { nombre } = req.params;
+  const cacheKey = `estructura_${nombre}`;
   try {
-    const { nombre } = req.params;
+    const cached = getCache(cacheKey);
+    if (cached) return res.json(cached);
+
+    await ensurePool();
     const result = await pool.request()
       .input('tableName', sql.NVarChar, nombre)
       .query(`
@@ -162,8 +220,11 @@ app.get('/api/tablas/:nombre/estructura', async (req, res) => {
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_NAME = @tableName ORDER BY ORDINAL_POSITION
       `);
+    setCache(cacheKey, result.recordset);
     res.json(result.recordset);
   } catch (err) {
+    const cached = getCache(cacheKey);
+    if (cached) return res.json(cached);
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: getErrorMessage(err) });
   }
@@ -176,11 +237,20 @@ app.get('/api/filtros/years', (_req, res) => {
 
 // ===================== /api/colaboradores =====================
 app.get('/api/colaboradores', async (req, res) => {
+  const cacheKey = `colaboradores_${JSON.stringify(req.query)}`;
   try {
+    // ── CACHE FIRST ──
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟢 Cache usado (/api/colaboradores)');
+      return res.json(cached);
+    }
+
+    await ensurePool();
+
     const where = [];
     const r = pool.request();
 
-    // Filtro Rectoría (OJO: columna real)
     where.push(`
       LOWER(LTRIM(RTRIM(
         REPLACE(REPLACE(REPLACE(REPLACE(
@@ -189,7 +259,6 @@ app.get('/api/colaboradores', async (req, res) => {
       ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
     `);
 
-    // Periodo (columna real)
     if (req.query.periodo) {
       r.input('periodo', sql.NVarChar, req.query.periodo);
       where.push(`[Periodo] = @periodo`);
@@ -205,26 +274,41 @@ app.get('/api/colaboradores', async (req, res) => {
         [Categoría en el escalafón docente]  AS escalafon,
         [Tipo de contrato]                   AS tipoContrato,
         [Duración del contrato]              AS duracionContrato,
-        [Numero de trabajadores]                AS total
+        [Numero de trabajadores]             AS total
       FROM Colaboradores
       WHERE ${where.join(" AND ")}
     `;
 
     const result = await r.query(sqlQuery);
+    setCache(cacheKey, result.recordset);
     res.json(result.recordset);
 
   } catch (err) {
     console.error("❌ Error /api/colaboradores:", err);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟡 BD caída → usando cache (/api/colaboradores)');
+      return res.json(cached);
+    }
+    if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: err.message });
   }
 });
 
 // ===================== /api/comparativos =====================
-
 app.get('/api/comparativos', async (req, res) => {
+  const cacheKey = `comparativos_${JSON.stringify(req.query)}`;
   try {
+    // ── CACHE FIRST ──
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟢 Cache usado (/api/comparativos)');
+      return res.json(cached);
+    }
 
-    const tableName = "Poblacion_Estudiantil"; // 👈 cambia si el nombre real es otro
+    await ensurePool();
+
+    const tableName = "Poblacion_Estudiantil";
 
     const filtroPeriodo = `
       (CASE
@@ -254,24 +338,38 @@ app.get('/api/comparativos', async (req, res) => {
     `;
 
     const result = await pool.request().query(query);
-
     console.log("✅ comparativos rows:", result.recordset.length);
-
+    setCache(cacheKey, result.recordset);
     res.json(result.recordset);
 
   } catch (err) {
     console.error("❌ Error comparativos:", err);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟡 BD caída → usando cache (/api/comparativos)');
+      return res.json(cached);
+    }
+    if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: err.message });
   }
 });
 
 // ===================== /api/oferta-activa =====================
 app.get('/api/oferta-activa', async (req, res) => {
+  const cacheKey = `oferta_activa_${JSON.stringify(req.query)}`;
   try {
+    // ── CACHE FIRST ──
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟢 Cache usado (/api/oferta-activa)');
+      return res.json(cached);
+    }
+
+    await ensurePool();
+
     const where = [];
     const r = pool.request();
 
-    // Filtro Rectoría Bogotá
     where.push(`
       LOWER(LTRIM(RTRIM(
         REPLACE(REPLACE(REPLACE(REPLACE(
@@ -280,7 +378,6 @@ app.get('/api/oferta-activa', async (req, res) => {
       ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
     `);
 
-    // Filtro estado activo (opcional, por defecto solo activos)
     const soloActivos = req.query.estado !== 'todos';
     if (soloActivos) {
       where.push(`
@@ -290,13 +387,11 @@ app.get('/api/oferta-activa', async (req, res) => {
       `);
     }
 
-    // Filtro modalidad opcional
     if (req.query.modalidad) {
       r.input('modalidad', sql.NVarChar, req.query.modalidad);
       where.push(`[MODALIDAD] COLLATE Latin1_General_CI_AI = @modalidad COLLATE Latin1_General_CI_AI`);
     }
 
-    // Filtro nivel de formación opcional
     if (req.query.nivel) {
       r.input('nivel', sql.NVarChar, req.query.nivel);
       where.push(`[NIVEL DE FORMACIÓN] COLLATE Latin1_General_CI_AI = @nivel COLLATE Latin1_General_CI_AI`);
@@ -334,12 +429,17 @@ app.get('/api/oferta-activa', async (req, res) => {
     `;
 
     const result = await r.query(sqlQuery);
-
     console.log('✅ oferta-activa rows:', result.recordset.length);
+    setCache(cacheKey, result.recordset);
     res.json(result.recordset);
 
   } catch (err) {
     console.error('❌ Error /api/oferta-activa:', err);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟡 BD caída → usando cache (/api/oferta-activa)');
+      return res.json(cached);
+    }
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: getErrorMessage(err) });
   }
@@ -348,9 +448,36 @@ app.get('/api/oferta-activa', async (req, res) => {
 
 // ===================== /api/datos/:tabla =====================
 app.get('/api/datos/:tabla', async (req, res) => {
+
+  // ── Construir cacheKey ANTES de cualquier await ──────────────────
+  const rawTabla = req.params.tabla;
+  const cacheKey = `datos_${normalize(rawTabla)}_${JSON.stringify(req.query)}`;
+
+  // ── CACHE FIRST: si hay cache, responde inmediatamente ───────────
+  const cachedEarly = getCache(cacheKey);
+  if (cachedEarly) {
+    console.log('🟢 Cache usado (/api/datos) [cache-first]');
+    return res.json(cachedEarly);
+  }
+
+  // ── Si la BD no está conectada, fallo rápido con 503 claro ───────
+  if (!poolReady()) {
+    try {
+      await ensurePool(); // intento de reconexión
+    } catch {
+      return res.status(503).json({
+        errorCode: 'DB_OFFLINE',
+        message: 'El servidor de base de datos no está disponible en este momento. No hay datos en cache para esta consulta.',
+        cached: false,
+      });
+    }
+  }
+
+  // ── Variables declaradas aquí para que catch las vea ─────────────
+  let realTableName = null;
+
   try {
-    const AI       = 'Latin1_General_CI_AI';
-    const rawTabla = req.params.tabla;
+    const AI = 'Latin1_General_CI_AI';
 
     const page     = Math.max(1, Number(req.query.page)     || 1);
     const pageSize = Math.min(10000, Math.max(100, Number(req.query.pageSize) || 1000));
@@ -362,18 +489,15 @@ app.get('/api/datos/:tabla', async (req, res) => {
     const periodosCSV         = (req.query.periodos         ?? '').toString();
     const centrosCSV          = (req.query.centros          ?? '').toString();
     const nivelesFormacionCSV = (req.query.nivelesFormacion ?? '').toString();
-    const periodicidadesCSV = (req.query.periodicidades ?? '').toString();
-    const programasCSV = (req.query.programas ?? '').toString();
-    const facultadesCSV = (req.query.facultades ?? '').toString();
-    const sedesCSV      = (req.query.sedes      ?? '').toString();
-
-
+    const periodicidadesCSV   = (req.query.periodicidades   ?? '').toString();
+    const programasCSV        = (req.query.programas        ?? '').toString();
+    const facultadesCSV       = (req.query.facultades       ?? '').toString();
+    const sedesCSV            = (req.query.sedes            ?? '').toString();
 
     // Resolver nombre real de tabla
     const validTables = await pool.request().query(`
       SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'
     `);
-    let realTableName = null;
     for (const row of validTables.recordset) {
       if (normalize(row.TABLE_NAME) === normalize(rawTabla)) {
         realTableName = row.TABLE_NAME;
@@ -394,15 +518,11 @@ app.get('/api/datos/:tabla', async (req, res) => {
     const colNames          = cols.recordset.map(r => r.COLUMN_NAME);
     const nivelCol          = findColumn(colNames, 'Nivel Académico');
     const nivelFormacionCol = findColumn(colNames, 'Nivel de Formación', 'Nivel Formacion');
-    const periodicidadCol = findColumn(colNames, 'Periodicidad');
-    const facultadCol = findColumn(colNames, 'Facultad');
-    const sedesCol  = findColumn(colNames, 'Sede');
-    const programaCol = findColumn(
-        colNames,
-        'Programa Académico',
-        'Programa',
-        'ProgramaAcademico'
-      );
+    const periodicidadCol   = findColumn(colNames, 'Periodicidad');
+    const facultadCol       = findColumn(colNames, 'Facultad');
+    const sedesCol          = findColumn(colNames, 'Sede');
+    const programaCol       = findColumn(colNames, 'Programa Académico', 'Programa', 'ProgramaAcademico');
+    const rectoriaCo        = findColumn(colNames, 'Rectoría', 'Rectoria', 'Sede');
     const hasAnyo           = colNames.some(c => c.toLowerCase() === 'año' || c.toLowerCase() === 'ano');
     const orderByClause     = hasAnyo ? 'ORDER BY [Año] DESC' : `ORDER BY [${cols.recordset[0]?.COLUMN_NAME || '1'}]`;
 
@@ -411,10 +531,8 @@ app.get('/api/datos/:tabla', async (req, res) => {
     const reqData  = pool.request();
     const reqCount = pool.request();
 
-    // Filtro Rectoría (literales, sin parámetro)
     where.push(buildRectoriaFilter());
 
-    // Años
     if (yearsCSV) {
       reqData.input('years', sql.NVarChar, yearsCSV);
       reqCount.input('years', sql.NVarChar, yearsCSV);
@@ -422,60 +540,40 @@ app.get('/api/datos/:tabla', async (req, res) => {
     } else {
       where.push(`[Año] BETWEEN 2020 AND 2026`);
     }
-        // Periodicidades
+
     if (periodicidadesCSV && periodicidadCol) {
       reqData.input('perio', sql.NVarChar, periodicidadesCSV);
       reqCount.input('perio', sql.NVarChar, periodicidadesCSV);
-
       where.push(`
         LOWER(LTRIM(RTRIM(CONVERT(NVARCHAR(100), [${periodicidadCol}] COLLATE Latin1_General_CI_AI))))
-        IN (
-          SELECT LOWER(LTRIM(RTRIM(value))) 
-          FROM STRING_SPLIT(@perio, ',')
-        )
+        IN (SELECT LOWER(LTRIM(RTRIM(value))) FROM STRING_SPLIT(@perio, ','))
       `);
     }
-          // Facultades
-      if (facultadesCSV && facultadCol) {
-        reqData.input('facs', sql.NVarChar, facultadesCSV);
-        reqCount.input('facs', sql.NVarChar, facultadesCSV);
-        where.push(`
-          [${facultadCol}] COLLATE ${AI} 
-          IN (SELECT value COLLATE ${AI} FROM STRING_SPLIT(@facs, ','))
-        `);
-      }
 
-      // Sedes (Rectoría)
-    // ✅ DESPUÉS
-    const rectoriaCo = findColumn(colNames, 'Rectoría', 'Rectoria', 'Sede');
+    if (facultadesCSV && facultadCol) {
+      reqData.input('facs', sql.NVarChar, facultadesCSV);
+      reqCount.input('facs', sql.NVarChar, facultadesCSV);
+      where.push(`[${facultadCol}] COLLATE ${AI} IN (SELECT value COLLATE ${AI} FROM STRING_SPLIT(@facs, ','))`);
+    }
 
     if (sedesCSV && rectoriaCo) {
       reqData.input('sedes', sql.NVarChar, sedesCSV);
       reqCount.input('sedes', sql.NVarChar, sedesCSV);
-      where.push(`
-        [${rectoriaCo}] COLLATE ${AI}
-        IN (SELECT value COLLATE ${AI} FROM STRING_SPLIT(@sedes, ','))
-      `);
+      where.push(`[${rectoriaCo}] COLLATE ${AI} IN (SELECT value COLLATE ${AI} FROM STRING_SPLIT(@sedes, ','))`);
     }
 
     if (programasCSV && programaCol) {
       reqData.input('progs', sql.NVarChar, programasCSV);
       reqCount.input('progs', sql.NVarChar, programasCSV);
-
-      where.push(`
-        [${programaCol}] COLLATE Latin1_General_CI_AI
-        IN (SELECT value COLLATE Latin1_General_CI_AI FROM STRING_SPLIT(@progs, ','))
-      `);
+      where.push(`[${programaCol}] COLLATE Latin1_General_CI_AI IN (SELECT value COLLATE Latin1_General_CI_AI FROM STRING_SPLIT(@progs, ','))`);
     }
 
-    // Modalidades
     if (modalidadesCSV) {
       reqData.input('mods', sql.NVarChar, modalidadesCSV);
       reqCount.input('mods', sql.NVarChar, modalidadesCSV);
       where.push(`[Modalidad] COLLATE ${AI} IN (SELECT value COLLATE ${AI} FROM STRING_SPLIT(@mods, ','))`);
     }
 
-    // Niveles académicos
     if (nivelesCSV && nivelCol) {
       reqData.input('niv', sql.NVarChar, nivelesCSV);
       reqCount.input('niv', sql.NVarChar, nivelesCSV);
@@ -494,21 +592,19 @@ app.get('/api/datos/:tabla', async (req, res) => {
         )
       `);
     }
-    // Nivel de formación
+
     if (nivelesFormacionCSV && nivelFormacionCol) {
       reqData.input('nivForm', sql.NVarChar, nivelesFormacionCSV);
       reqCount.input('nivForm', sql.NVarChar, nivelesFormacionCSV);
       where.push(`[${nivelFormacionCol}] COLLATE ${AI} IN (SELECT value COLLATE ${AI} FROM STRING_SPLIT(@nivForm, ','))`);
     }
 
-    // Centros universitarios
     if (centrosCSV) {
       reqData.input('cts', sql.NVarChar, centrosCSV);
       reqCount.input('cts', sql.NVarChar, centrosCSV);
       where.push(`[Centro Universitario] COLLATE ${AI} IN (SELECT value COLLATE ${AI} FROM STRING_SPLIT(@cts, ','))`);
     }
 
-    // Periodos
     if (periodosCSV) {
       reqData.input('pers', sql.NVarChar, periodosCSV.toUpperCase());
       reqCount.input('pers', sql.NVarChar, periodosCSV.toUpperCase());
@@ -527,80 +623,68 @@ app.get('/api/datos/:tabla', async (req, res) => {
     }
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const cacheKey = `datos_${realTableName}_${JSON.stringify(req.query)}`;
-    
-    // ✅ intentar usar cache antes de consultar BD
-    const cached = getCache(cacheKey);
-    if (cached) {
-      console.log("🟢 Cache usado (/api/datos)");
-      return res.json(cached);
-    }
 
-
-    const dataSql  = `
-          SELECT
-      [Año],
-      [Modalidad],
-      [Nivel Académico],
-      [Nivel de Formación],
-      [Facultad],
-      [Centro Universitario],
-      [Centro de Operación],
-      [Programa Académico],
-      [Estudiantes Nuevos],
-      [Estudiantes Continuos],
-      [Estudiantes Totales],
-      [Periodo],
-      [Periodicidad],
-      [Rectoría]
-    FROM [${realTableName}] ${whereSql}
+    const dataSql = `
+      SELECT
+        [Año],
+        [Modalidad],
+        [Nivel Académico],
+        [Nivel de Formación],
+        [Facultad],
+        [Centro Universitario],
+        [Centro de Operación],
+        [Programa Académico],
+        [Estudiantes Nuevos],
+        [Estudiantes Continuos],
+        [Estudiantes Totales],
+        [Periodo],
+        [Periodicidad],
+        [Rectoría]
+      FROM [${realTableName}] ${whereSql}
       ${orderByClause}
       OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY
     `;
     const countSql = `SELECT COUNT(*) AS total FROM [${realTableName}] ${whereSql}`;
 
     const [dataR, countR] = await Promise.all([
-      
       reqData.query(dataSql),
       reqCount.query(countSql),
     ]);
-
 
     const response = {
       page,
       pageSize,
       total: countR.recordset[0]?.total || 0,
       rows: dataR.recordset,
+      fromCache: false,
     };
-    
-    // ✅ guardar cache
+
     setCache(cacheKey, response);
-    
+    console.log(`✅ /api/datos/${realTableName} → ${response.rows.length} filas`);
     res.json(response);
 
-
   } catch (err) {
+    console.error('❌ Error /api/datos:', err);
 
-console.error('❌ Error /api/datos:', err);
+    // realTableName puede ser null si el error ocurrió antes de resolverlo
+    console.error('   Tabla solicitada:', rawTabla, '| Tabla resuelta:', realTableName ?? 'N/A');
 
-// ✅ usar tabla segura (fallback)
-const tableSafe = typeof realTableName !== "undefined"
-  ? realTableName
-  : req.params.tabla;
+    // Último intento: devolver cache si existe
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log('🟡 BD caída → usando cache (/api/datos)');
+      return res.json({ ...cached, fromCache: true });
+    }
 
-const cacheKey = `datos_${tableSafe}_${JSON.stringify(req.query)}`;
-const cached = getCache(cacheKey);
+    if (isPausedDbError(err)) return sendPaused(res);
 
-if (cached) {
-  console.log("🟡 BD caída → usando cache");
-  return res.json(cached);
-}
-
-// ✅ si es paused Azure
-if (isPausedDbError(err)) return sendPaused(res);
-
-res.status(500).json({ error: getErrorMessage(err) });
-}
+    // Error claro para el front, no exponer detalles internos
+    res.status(500).json({
+      error: 'No se pudo obtener datos y no hay cache disponible.',
+      detail: getErrorMessage(err),
+      table: rawTabla,
+    });
+  }
 });
 
 // Ejecutar SELECT custom
@@ -610,6 +694,7 @@ app.post('/api/query', async (req, res) => {
     if (!/^\s*select\b/i.test(query)) {
       return res.status(403).json({ error: 'Solo se permiten consultas SELECT' });
     }
+    await ensurePool();
     const r = await pool.request().query(query);
     res.json(r.recordset);
   } catch (err) {
@@ -632,7 +717,9 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, async () => {
   console.log(`🚀 Servidor en puerto ${PORT}`);
   try { await connectDB(); }
-  catch (err) { console.error('Error conectando DB:', err); }
+  catch (err) {
+    console.error('⚠️  No se pudo conectar al inicio, el servidor sigue activo con cache:', getErrorMessage(err));
+  }
 });
 
 process.on('SIGINT', async () => {
