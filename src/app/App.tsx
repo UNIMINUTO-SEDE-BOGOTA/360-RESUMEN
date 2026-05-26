@@ -723,7 +723,7 @@ function App() {
 
         {/* TABS — scroll horizontal en móvil, sin wrap */}
         <div className="w-full overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          <div className="flex gap-1.5" style={{ width: "max-content" }}>
+          <div className="flex gap-1.5 sm:justify-center" style={{ width: "max-content", minWidth: "100%" }}>
             {["estudiantes", "colaboradores", "comparativos", "oferta", "investigacion"].map(tab => (
               <button
                 key={tab}
