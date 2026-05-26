@@ -17,6 +17,8 @@ import { ParetoProyectado } from "./components/ParetoProyectado";
 import ColaboradoresView from "./components/ColaboradoresView";
 import ComparativosView from "./components/ComparativosView";
 import { OfertaView } from "./components/OfertaView";
+import { InvestigacionView } from "./components/InvestigacionView";
+
 
 const API_URL =
   (typeof import.meta !== "undefined" &&
@@ -1068,18 +1070,7 @@ function App() {
               {activeTab === "colaboradores" && <ColaboradoresView />}
               {activeTab === "comparativos" && <ComparativosView />}
               {activeTab === "oferta" && <OfertaView fechaCorte={fechaCorte} />}
-              {activeTab === "investigacion" && (
-                <div className="w-full">
-                  <iframe
-                    title="Investigacion Power BI"
-                    src="https://app.powerbi.com/view?r=eyJrIjoiNmI4OTU2YTItZDdkMy00ZDU4LWJkMzgtYTM5Yzc1MDUyYzUxIiwidCI6ImIxYmE4NWViLWEyNTMtNDQ2Ny05ZWU4LWQ0ZjhlZDRkZjMwMCIsImMiOjR9"
-                    className="w-full h-[calc(100vh-180px)] rounded-md border"
-                    frameBorder="0"
-                    allowFullScreen
-                  />
-                </div>
-              )}
-
+              {activeTab === "investigacion" && <InvestigacionView />}
             </div>
           </div>
         </div>
