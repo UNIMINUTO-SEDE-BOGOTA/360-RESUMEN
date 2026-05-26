@@ -801,59 +801,62 @@ console.log("All rows:", escuelaRows);
   <div className="min-h-screen flex flex-col">
 
     {/* HEADER — sticky solo él */}
-    <header className="sticky top-0 z-50 bg-white border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+<header className="sticky top-0 z-50 bg-white border-b px-3 py-2 flex flex-wrap items-center justify-between gap-2">
 
-      {/* LOGO */}
-      <div className="flex items-center gap-3 min-w-0">
-        <img
-          src="/Logo Bogotá 2.png"
-          alt="Uniminuto"
-          className="h-16 object-contain"
-        />
-        <div className="leading-tight truncate">
-          <h1 className="text-sm font-bold text-gray-800">360 Resumen</h1>
-          <p className="text-[10px] text-gray-500">UNIMINUTO • 2020–2026</p>
-        </div>
-      </div>
+  {/* LOGO — más pequeño en móvil */}
+  <div className="flex items-center gap-2 min-w-0">
+    <img
+      src="/Logo Bogotá 2.png"
+      alt="Uniminuto"
+      className="h-10 sm:h-16 object-contain"
+    />
+    <div className="leading-tight truncate">
+      <h1 className="text-xs sm:text-sm font-bold text-gray-800">360 Resumen</h1>
+      <p className="text-[9px] sm:text-[10px] text-gray-500">UNIMINUTO • 2020–2026</p>
+    </div>
+  </div>
 
-      {/* TABS */}
-      <div className="flex justify-center">
-        <div className="flex flex-wrap gap-2">
-          {["estudiantes", "colaboradores", "comparativos", "oferta", "investigacion"].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 rounded-md text-xs capitalize transition ${
-                activeTab === tab
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
+  {/* ACCIONES — a la derecha del logo en móvil */}
+  <div className="flex gap-2">
+    <button
+      onClick={forceRefresh}
+      className="bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-blue-700 flex items-center gap-1.5 text-xs sm:text-sm font-medium"
+    >
+      <RefreshCw size={15} /> 
+      <span className="hidden xs:inline">Actualizar</span>
+      <span className="xs:hidden">↻</span>
+    </button>
+    <button
+      onClick={() => window.open(
+        "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
+        "_blank"
+      )}
+      className="bg-slate-800 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1.5 hover:bg-slate-700"
+    >
+      <Gauge size={15} /> 360
+    </button>
+  </div>
 
-      {/* ACCIONES */}
-      <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+  {/* TABS — fila completa abajo, scroll horizontal en móvil */}
+  <div className="w-full overflow-x-auto scrollbar-none">
+    <div className="flex gap-1.5 w-max">
+      {["estudiantes", "colaboradores", "comparativos", "oferta", "investigacion"].map(tab => (
         <button
-          onClick={forceRefresh}
-          className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 text-sm font-medium"
+          key={tab}
+          onClick={() => setActiveTab(tab)}
+          className={`px-3 py-1 rounded-md text-xs capitalize transition whitespace-nowrap ${
+            activeTab === tab
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 hover:bg-gray-200"
+          }`}
         >
-          <RefreshCw size={18} /> Actualizar
+          {tab}
         </button>
-        <button
-          onClick={() => window.open(
-            "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
-            "_blank"
-          )}
-          className="flex-1 sm:flex-none bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-700"
-        >
-          <Gauge size={18} /> 360
-        </button>
-      </div>
-    </header>
+      ))}
+    </div>
+  </div>
+
+</header>
 
     {/* MARQUEE — sticky debajo del header */}
     <div className="sticky top-[72px] z-40 bg-slate-900 text-white text-xs overflow-hidden border-y">
