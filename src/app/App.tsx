@@ -844,7 +844,7 @@ console.log("All rows:", escuelaRows);
           </button>
           <button
   onClick={() => window.open(
-    "
+    "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
     "_blank"
   )}
   className="flex-1 sm:flex-none bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2 hover:bg-slate-700"
@@ -1216,17 +1216,6 @@ console.log("All rows:", escuelaRows);
                 </div>
               )}
               
-{activeTab === "360" && (
-  <div className="h-full w-full">
-    <iframe
-      title="Dashboard 360"
-      src="
-      className="w-full h-[calc(100vh-180px)] rounded-md border"
-      frameBorder="0"
-    />
-  </div>
-)}
-
 
 
 
