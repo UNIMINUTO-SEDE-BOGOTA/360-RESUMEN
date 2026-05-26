@@ -234,13 +234,7 @@ function App() {
   }, []);
 
   // 2) Selección inicial: el año más reciente disponible
-  useEffect(() => {
-    if (!base.years || base.years.length === 0) return;
-    setSelYears(prev => {
-      if (prev.length > 0 && prev.every(y => base.years.includes(y))) return prev;
-      return [base.years[0]];
-    });
-  }, [base.years]);
+  const [selYears, setSelYears] = useState<string[]>(["2026"]);
 
   // 3) Resto de combos: modalidades, períodos combinados, centros, etc.
   useEffect(() => {
@@ -1033,7 +1027,7 @@ console.log("All rows:", escuelaRows);
                           </div>
 
                           {/* CONTENIDO PARETO EJECUTADO */}
-                          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+                          <div className="flex flex-col lg:flex-row gap-3 w-full">
 
                             {/* COLUMNA IZQUIERDA: tablas */}
                             <div className="flex flex-col gap-3">
@@ -1117,8 +1111,9 @@ console.log("All rows:", escuelaRows);
                               <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
                                 Pareto de programas en relación a estudiantes nuevos
                               </div>
-                              <div className="p-2 h-[500px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                                  <div className="p-2 overflow-x-auto">
+                                   <div style={{ minWidth: "520px" }}>
+                                    <ResponsiveContainer width="100%" height={420}>
                                   <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
                                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                                     <XAxis
@@ -1190,7 +1185,7 @@ console.log("All rows:", escuelaRows);
                                 </ResponsiveContainer>
                               </div>
                             </div>
-
+                           </div>
                           </div>
                         </div>
                       )}
