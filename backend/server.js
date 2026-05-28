@@ -103,22 +103,6 @@ function buildRectoriaFilter() {
 function poolReady() {
   return dbConnected && pool && pool.connected;
 }
-
-async function ensurePool() {
-  if (!poolReady()) {
-    console.log('🔄 Reintentando conexión a Azure SQL...');
-    try {
-      if (pool) { try { await pool.close(); } catch {} }
-      pool = await sql.connect(config);
-      dbConnected = true;
-      console.log('✅ Reconexión exitosa');
-    } catch (err) {
-      dbConnected = false;
-      throw err;
-    }
-  }
-}
-
 // ==================== WARMUP CACHE ====================
 
 // Se declara DESPUÉS de cache, helpers y PORT
@@ -148,7 +132,6 @@ async function warmupCache() {
   warmupDone = true;
   console.log(`✅ Cache pre-calentado: ${cache.size} entradas`);
 }
-
 // ==================== ENDPOINTS ====================
 
 // Cache: limpiar
@@ -168,35 +151,39 @@ app.get('/api/cache/warmup-status', (_req, res) => {
 });
 
 // Cache: lanzar warmup manual (botón Actualizar)
-app.post('/api/cache/warmup', (_req, res) => {
-  cache.clear();
-  warmupDone = false; // <-- ponlo AQUÍ, antes de responder
-  res.json({ message: 'Warmup iniciado', entries: 0 });
-  warmupCache().catch(console.error); // corre en background
+app.post('/api/cache/warmup', async (_req, res) => {
+  try {
+    await connectDB(); // 🔥 esto enciende Azure
+    cache.clear();
+    warmupDone = false;
+
+    res.json({ message: 'Warmup iniciado', entries: 0 });
+
+    await warmupCache(); // carga todo
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 // Salud
-app.get('/api/health', async (_req, res) => {
-  try {
-    await ensurePool();
-    await pool.request().query('SELECT 1 AS ok');
-    res.json({ status: 'ok', connected: true, source: 'AZURE' });
-  } catch (err) {
-    if (isPausedDbError(err)) return sendPaused(res);
-    res.status(200).json({ status: 'degraded', connected: false, cached: cache.size > 0, error: getErrorMessage(err) });
-  }
+
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    connected: poolReady(),
+    cache: cache.size > 0
+  });
 });
 
+
 // Status
-app.get('/api/status', async (_req, res) => {
-  try {
-    await ensurePool();
-    const r = await pool.request().query('SELECT DB_NAME() AS db, SYSDATETIMEOFFSET() AS now');
-    res.json({ paused: false, source: 'AZURE', info: r.recordset?.[0] });
-  } catch (err) {
-    if (isPausedDbError(err)) return sendPaused(res);
-    res.status(200).json({ paused: null, connected: false, cached: cache.size > 0, error: getErrorMessage(err) });
-  }
+
+app.get('/api/status', (_req, res) => {
+  res.json({
+    paused: !poolReady(),
+    connected: poolReady(),
+    cache: cache.size > 0
+  });
 });
 
 // Tablas
@@ -205,7 +192,14 @@ app.get('/api/tablas', async (_req, res) => {
   try {
     const cached = getCache(cacheKey);
     if (cached) { console.log('🟢 Cache usado (/api/tablas)'); return res.json(cached); }
-    await ensurePool();
+    
+if (!poolReady()) {
+  return res.status(503).json({
+    error: 'Base de datos apagada',
+    cached: false
+  });
+}
+
     const result = await pool.request().query(`
       SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
       WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME
@@ -227,7 +221,14 @@ app.get('/api/tablas/:nombre/estructura', async (req, res) => {
   try {
     const cached = getCache(cacheKey);
     if (cached) return res.json(cached);
-    await ensurePool();
+    
+if (!poolReady()) {
+  return res.status(503).json({
+    error: 'Base de datos apagada',
+    cached: false
+  });
+}
+
     const result = await pool.request()
       .input('tableName', sql.NVarChar, nombre)
       .query(`
@@ -257,7 +258,13 @@ app.get('/api/colaboradores', async (req, res) => {
   try {
     const cached = getCache(cacheKey);
     if (cached) { console.log('🟢 Cache usado (/api/colaboradores)'); return res.json(cached); }
-    await ensurePool();
+
+if (!poolReady()) {
+  return res.status(503).json({
+    error: 'Base de datos apagada',
+    cached: false
+  });
+}
     const where = [];
     const r = pool.request();
     where.push(`
@@ -301,7 +308,13 @@ app.get('/api/comparativos', async (req, res) => {
   try {
     const cached = getCache(cacheKey);
     if (cached) { console.log('🟢 Cache usado (/api/comparativos)'); return res.json(cached); }
-    await ensurePool();
+
+if (!poolReady()) {
+  return res.status(503).json({
+    error: 'Base de datos apagada',
+    cached: false
+  });
+}
     const filtroPeriodo = `
       (CASE
         WHEN REPLACE(UPPER(CONVERT(NVARCHAR(30), [Periodo])), ' ', '') LIKE 'S1%' THEN 'S1'
@@ -336,7 +349,13 @@ app.get('/api/oferta-activa', async (req, res) => {
   try {
     const cached = getCache(cacheKey);
     if (cached) { console.log('🟢 Cache usado (/api/oferta-activa)'); return res.json(cached); }
-    await ensurePool();
+
+if (!poolReady()) {
+  return res.status(503).json({
+    error: 'Base de datos apagada',
+    cached: false
+  });
+}
     const where = [];
     const r = pool.request();
     where.push(`
@@ -405,16 +424,14 @@ app.get('/api/datos/:tabla', async (req, res) => {
   const cachedEarly = getCache(cacheKey);
   if (cachedEarly) { console.log('🟢 Cache usado (/api/datos) [cache-first]'); return res.json(cachedEarly); }
 
-  if (!poolReady()) {
-    try { await ensurePool(); }
-    catch {
-      return res.status(503).json({
-        errorCode: 'DB_OFFLINE',
-        message: 'El servidor de base de datos no está disponible. No hay datos en cache para esta consulta.',
-        cached: false,
-      });
-    }
-  }
+  
+if (!poolReady()) {
+  return res.status(503).json({
+    errorCode: 'DB_OFFLINE',
+    message: 'Base apagada y sin cache disponible',
+    cached: false,
+  });
+}
 
   let realTableName = null;
 
@@ -568,7 +585,13 @@ app.post('/api/query', async (req, res) => {
   try {
     const { query } = req.body;
     if (!/^\s*select\b/i.test(query)) return res.status(403).json({ error: 'Solo se permiten consultas SELECT' });
-    await ensurePool();
+    
+if (!poolReady()) {
+  return res.status(503).json({
+    error: 'Base de datos apagada'
+  });
+}
+
     const r = await pool.request().query(query);
     res.json(r.recordset);
   } catch (err) {
@@ -596,35 +619,15 @@ function startKeepalive() {
     }
   }, 10 * 60 * 1000); // cada 10 minutos
 }
-function startDbPing() {
-  setInterval(async () => {
-    try {
-      if (!poolReady()) {
-        await connectDB();
-        if (dbConnected) {
-          console.log('🔄 Pool reconectado por ping');
-          await warmupCache();
-        }
-      } else {
-        await pool.request().query('SELECT 1');
-      }
-    } catch (e) {
-      console.warn('⚠️ DB ping falló:', e.message);
-      dbConnected = false;
-    }
-  }, 5 * 60 * 1000); // cada 5 minutos
-}
 
 // ==================== INICIO ====================
 app.listen(PORT, async () => {
   console.log(`🚀 Servidor en puerto ${PORT}`);
   try {
-    await connectDB();
-    if (dbConnected) {
-      setTimeout(warmupCache, 1500);
-    }
-    startKeepalive();
-    startDbPing(); // <-- también esta
+    
+console.log('🟢 Servidor iniciado en modo offline');
+startKeepalive();
+
   } catch (err) {
     console.error('⚠️  No se pudo conectar al inicio:', getErrorMessage(err));
   }
