@@ -583,19 +583,52 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
+// ==================== KEEPALIVE (evita sleep en Render free) ====================
+function startKeepalive() {
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  
+  setInterval(async () => {
+    try {
+      await fetch(`${SELF_URL}/api/health`);
+      console.log('💓 Keepalive OK');
+    } catch (e) {
+      console.warn('⚠️ Keepalive falló:', e.message);
+    }
+  }, 10 * 60 * 1000); // cada 10 minutos
+}
+function startDbPing() {
+  setInterval(async () => {
+    try {
+      if (!poolReady()) {
+        await connectDB();
+        if (dbConnected) {
+          console.log('🔄 Pool reconectado por ping');
+          await warmupCache();
+        }
+      } else {
+        await pool.request().query('SELECT 1');
+      }
+    } catch (e) {
+      console.warn('⚠️ DB ping falló:', e.message);
+      dbConnected = false;
+    }
+  }, 5 * 60 * 1000); // cada 5 minutos
+}
+
 // ==================== INICIO ====================
 app.listen(PORT, async () => {
   console.log(`🚀 Servidor en puerto ${PORT}`);
   try {
     await connectDB();
     if (dbConnected) {
-      setTimeout(warmupCache, 1500); // espera que el pool estabilice
+      setTimeout(warmupCache, 1500);
     }
+    startKeepalive();
+    startDbPing(); // <-- también esta
   } catch (err) {
     console.error('⚠️  No se pudo conectar al inicio:', getErrorMessage(err));
   }
 });
-
 process.on('SIGINT', async () => {
   console.log('\n👋 Cerrando servidor...');
   if (pool) { try { await pool.close(); } catch {} }
