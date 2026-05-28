@@ -635,10 +635,44 @@ function App() {
     }
   };
 
-  const forceRefresh = async () => {
-    await fetch(`${API_URL}/api/cache/clear`, { method: "POST" });
-    loadDashboard();
-  };
+const forceRefresh = async () => {
+  setIsLoading(true);
+  setErr(null);
+
+  try {
+    // 1. Limpia cache y arranca warmup en el backend
+    await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST' });
+
+    // 2. Espera hasta que el warmup termine (polling cada 1.5s, máx 30s)
+    const maxWait = 30_000;
+    const interval = 1_500;
+    const start = Date.now();
+
+    await new Promise<void>((resolve) => {
+      const check = async () => {
+        try {
+          const r = await fetch(`${API_URL}/api/cache/warmup-status`);
+          const { done } = await r.json();
+          if (done || Date.now() - start > maxWait) {
+            resolve();
+          } else {
+            setTimeout(check, interval);
+          }
+        } catch {
+          resolve(); // Si falla el status, continúa de todas formas
+        }
+      };
+      setTimeout(check, interval);
+    });
+
+    // 3. Recarga la vista actual
+    await loadDashboard();
+
+  } catch (e: any) {
+    setErr(e.message || 'Error al actualizar');
+    setIsLoading(false);
+  }
+};
 
   // ── Disparar carga — GUARD: no corre hasta que haya año seleccionado ──
   useEffect(() => {
