@@ -165,7 +165,7 @@ function App() {
   const [highlightBar, setHighlightBar] = useState(false);
   const [highlightLine, setHighlightLine] = useState(false);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const reqId = useRef(0);
 
@@ -228,79 +228,79 @@ function App() {
     });
   }, [base.years]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const all = await fetchAzureData();
-
-        const periodicidades = [...new Set(
-          all.map(d => (d.periodicidad ?? "").toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-        const nivelesFormacion = [...new Set(
-          all.map(d => (d.nivelFormacion ?? "").toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-        const facultades = [...new Set(
-          all.map(d => (d.facultad ?? "").toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-        const periodosCombinados = [...new Set(
-          all
-            .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : "")
-            .filter(Boolean)
-        )].sort((a, b) => b.localeCompare(a));
-
-        const sedes = [...new Set(
-          all.map(d => (d.rectoria ?? "").toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-        const programas = [...new Set(
-          all.map(d => (d.programa ?? d.siglasPrograma ?? "").toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-        setListaProgramas(programas.map(p => ({ label: p, value: p })));
-
-        const modalidades = [...new Set(
-          all.map(d => (d.categoria ?? "").toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-        const niveles = [...new Set(
-          all.map(d => normalizeNivel(d.nivelAcademico))
-        )].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-
-        const centros = [...new Set(
-          all.map(d => (d.centro ?? "").toString().trim()).filter(Boolean)
-        )].sort((a, b) => {
-          const indexA = ORDEN_CENTROS.indexOf(a);
-          const indexB = ORDEN_CENTROS.indexOf(b);
-          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-          if (indexA !== -1) return -1;
-          if (indexB !== -1) return 1;
-          return a.localeCompare(b, "es", { sensitivity: "base" });
-        });
-
-        setSelNiveles(prev =>
-          prev.map(normalizeNivel).filter(v => ["Pregrado", "Posgrado"].includes(v))
-        );
-
-        setBase(prev => ({
-          ...prev,
-          modalidades,
-          niveles,
-          periodos: periodosCombinados,
-          centros,
-          periodicidades,
-          nivelesFormacion,
-          facultades,
-          sedes
-        }));
-
-      } catch (e) {
-        console.error("Error cargando combos:", e);
-      }
-    })();
-  }, []);
+useEffect(() => {
+  (async () => {
+    const all = await fetchAzureData(); // devuelve [] si no hay cache, sin errores
+ 
+    // Si no hay datos aún (Redis vacío), no hacer nada —
+    // el usuario debe pulsar "Actualizar"
+    if (!all || all.length === 0) return;
+ 
+    const periodicidades = [...new Set(
+      all.map(d => (d.periodicidad ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const nivelesFormacion = [...new Set(
+      all.map(d => (d.nivelFormacion ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const facultades = [...new Set(
+      all.map(d => (d.facultad ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const periodosCombinados = [...new Set(
+      all
+        .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : '')
+        .filter(Boolean)
+    )].sort((a, b) => b.localeCompare(a));
+ 
+    const sedes = [...new Set(
+      all.map(d => (d.rectoria ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const programas = [...new Set(
+      all.map(d => (d.programa ?? d.siglasPrograma ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    setListaProgramas(programas.map(p => ({ label: p, value: p })));
+ 
+    const modalidades = [...new Set(
+      all.map(d => (d.categoria ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const niveles = [...new Set(
+      all.map(d => normalizeNivel(d.nivelAcademico))
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const centros = [...new Set(
+      all.map(d => (d.centro ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => {
+      const indexA = ORDEN_CENTROS.indexOf(a);
+      const indexB = ORDEN_CENTROS.indexOf(b);
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      return a.localeCompare(b, 'es', { sensitivity: 'base' });
+    });
+ 
+    setSelNiveles(prev =>
+      prev.map(normalizeNivel).filter(v => ['Pregrado', 'Posgrado'].includes(v))
+    );
+ 
+    setBase(prev => ({
+      ...prev,
+      modalidades,
+      niveles,
+      periodos: periodosCombinados,
+      centros,
+      periodicidades,
+      nivelesFormacion,
+      facultades,
+      sedes,
+    }));
+  })();
+}, []);
+ 
 
   useEffect(() => {
     if (activeTab !== "estudiantes") {
@@ -638,64 +638,133 @@ function App() {
 const forceRefresh = async () => {
   setIsLoading(true);
   setErr(null);
-
+ 
   try {
-    // 1. Limpia cache y arranca warmup en el backend
+    // 1. Lanza warmup en backend (conecta Azure y recarga Redis)
     await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST' });
-
-    // 2. Espera hasta que el warmup termine (polling cada 1.5s, máx 30s)
-    const maxWait = 30_000;
-    const interval = 1_500;
-    const start = Date.now();
-
+ 
+    // 2. Polling hasta que el warmup termine (máx 60s)
+    const maxWait  = 60_000;
+    const interval = 2_000;
+    const start    = Date.now();
+ 
     await new Promise<void>((resolve) => {
       const check = async () => {
         try {
           const r = await fetch(`${API_URL}/api/cache/warmup-status`);
-          const { done } = await r.json();
-          if (done || Date.now() - start > maxWait) {
+          const { done, entries } = await r.json();
+          if ((done && entries > 0) || Date.now() - start > maxWait) {
             resolve();
           } else {
             setTimeout(check, interval);
           }
         } catch {
-          resolve(); // Si falla el status, continúa de todas formas
+          resolve();
         }
       };
       setTimeout(check, interval);
     });
-
-    // 3. Recarga la vista actual
+ 
+    // 3. Recargar combos con los datos frescos de Redis
+    const all = await fetchAzureData();
+    if (all && all.length > 0) {
+      const periodicidades = [...new Set(
+        all.map(d => (d.periodicidad ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const nivelesFormacion = [...new Set(
+        all.map(d => (d.nivelFormacion ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const facultades = [...new Set(
+        all.map(d => (d.facultad ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const periodosCombinados = [...new Set(
+        all
+          .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : '')
+          .filter(Boolean)
+      )].sort((a, b) => b.localeCompare(a));
+ 
+      const sedes = [...new Set(
+        all.map(d => (d.rectoria ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const programas = [...new Set(
+        all.map(d => (d.programa ?? d.siglasPrograma ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      setListaProgramas(programas.map(p => ({ label: p, value: p })));
+ 
+      const modalidades = [...new Set(
+        all.map(d => (d.categoria ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const niveles = [...new Set(
+        all.map(d => normalizeNivel(d.nivelAcademico))
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const centros = [...new Set(
+        all.map(d => (d.centro ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => {
+        const indexA = ORDEN_CENTROS.indexOf(a);
+        const indexB = ORDEN_CENTROS.indexOf(b);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b, 'es', { sensitivity: 'base' });
+      });
+ 
+      setBase(prev => ({
+        ...prev,
+        modalidades,
+        niveles,
+        periodos: periodosCombinados,
+        centros,
+        periodicidades,
+        nivelesFormacion,
+        facultades,
+        sedes,
+      }));
+    }
+ 
+    // 4. Recargar dashboard
     await loadDashboard();
-
+ 
   } catch (e: any) {
     setErr(e.message || 'Error al actualizar');
     setIsLoading(false);
   }
 };
-
   // ── Disparar carga — GUARD: no corre hasta que haya año seleccionado ──
-  useEffect(() => {
-    if (selYears.length === 0) return;
-    if (subViewEstudiantes === "pareto") {
-      loadPareto();
-    } else {
-      loadDashboard();
-    }
-  }, [
-    subViewEstudiantes,
-    selYears,
-    selModalidades,
-    selNiveles,
-    selPeriodos,
-    selCentros,
-    selPeriodicidades,
-    selNivelFormacion,
-    selProgramas,
-    selSedes,
-    selFacultades,
-    base.periodicidades.length,
-  ]);
+ // ── Disparar carga — solo si hay combos cargados (Redis tiene datos) ──
+useEffect(() => {
+  if (selYears.length === 0) return;
+  // Si los combos están vacíos, significa que Redis no tiene datos todavía.
+  // No intentar cargar → esperar a que el usuario pulse "Actualizar"
+  if (base.modalidades.length === 0 && base.centros.length === 0) {
+    setIsLoading(false);
+    return;
+  }
+  if (subViewEstudiantes === "pareto") {
+    loadPareto();
+  } else {
+    loadDashboard();
+  }
+}, [
+  subViewEstudiantes,
+  selYears,
+  selModalidades,
+  selNiveles,
+  selPeriodos,
+  selCentros,
+  selPeriodicidades,
+  selNivelFormacion,
+  selProgramas,
+  selSedes,
+  selFacultades,
+  base.periodicidades.length,
+]);
 
   // ==================== ACCIONES ====================
 
