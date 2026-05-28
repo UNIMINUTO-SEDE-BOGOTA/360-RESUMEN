@@ -3,18 +3,18 @@
 export interface DataItem {
   id: number;
   fecha: string;
-  categoria: string;        // Modalidad
-  nivelAcademico: string;   // Nivel
+  categoria: string;
+  nivelAcademico: string;
   rectoria?: string;
   ceco?: string;
   snies?: string;
-  centro?: string;          // Centro Universitario
+  centro?: string;
   sede?: string;
   centroOperacion?: string;
   facultad?: string;
   abreviatura?: string;
   siglasPrograma?: string;
-  programa?: string;        // Programa Académico
+  programa?: string;
   periodo?: string;
   periodicidad?: string;
   nuevos?: number;
@@ -83,83 +83,39 @@ const mapRow = (item: any, index: number): DataItem => ({
   graduados:       Number(item['Graduados'] ?? 0),
 });
 
-// ==================== WAIT FOR CACHE ====================
-// Si el backend responde 503 con errorCode NO_DATA significa que Redis
-// está vacío y la BD no está conectada. Espera hasta que haya datos.
+// ==================== FETCH SEGURO ====================
+// NUNCA lanza error ni reintenta — si no hay cache simplemente
+// devuelve vacío. Azure SQL solo se enciende desde el botón Actualizar.
 
-async function waitForCache(
-  maxWaitMs = 60_000,
-  intervalMs = 2_000
-): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < maxWaitMs) {
-    try {
-      const r = await fetch(`${API_URL}/api/cache/warmup-status`);
-      if (r.ok) {
-        const { done, entries } = await r.json();
-        if (done && entries > 0) return; // cache listo
-      }
-    } catch {
-      // backend aún arrancando, seguir esperando
-    }
-    await new Promise(res => setTimeout(res, intervalMs));
-  }
-  // Si se agotó el tiempo, continuar de todas formas
-}
-
-// ==================== FETCH CON REINTENTO ====================
-
-async function fetchWithRetry(
-  url: string,
-  maxRetries = 3,
-  delayMs = 2_000
-): Promise<Response> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+async function safeFetch(url: string): Promise<any[] | null> {
+  try {
     const res = await fetch(url, { cache: 'no-store' });
 
-    if (res.ok) return res;
+    // Sin cache y BD apagada → vacío silencioso, NO reintentar
+    if (res.status === 503) return null;
 
-    if (res.status === 503) {
-      let body: any = {};
-      try { body = await res.clone().json(); } catch {}
+    if (!res.ok) return null;
 
-      // Sin datos en cache ni BD → esperar warmup y reintentar
-      if (body?.errorCode === 'NO_DATA') {
-        console.warn(`⏳ Sin datos (intento ${attempt + 1}/${maxRetries + 1}), esperando cache...`);
-        await waitForCache();
-        continue;
-      }
-
-      // Azure pausado → no tiene sentido reintentar
-      if (body?.errorCode === 'AZURE_SQL_PAUSED') {
-        throw new Error(body.message ?? 'Azure SQL pausado');
-      }
-    }
-
-    // Otros errores: reintentar con delay
-    if (attempt < maxRetries) {
-      console.warn(`⚠️ Error ${res.status}, reintentando en ${delayMs}ms...`);
-      await new Promise(r => setTimeout(r, delayMs));
-      continue;
-    }
-
-    throw new Error(`Error al obtener base de datos (${res.status})`);
+    const payload = await res.json();
+    return Array.isArray(payload) ? payload : (payload?.rows ?? []);
+  } catch {
+    return null;
   }
-
-  throw new Error('No se pudo conectar al servidor');
 }
 
-// ==================== FETCH BASE (para combos) ====================
+// ==================== FETCH BASE (combos) ====================
+// Solo lee cache de Redis. Si no hay datos devuelve [].
+// NUNCA despierta Azure.
 
 export async function fetchAzureData(): Promise<DataItem[]> {
   const url = `${API_URL}/api/datos/${TABLE}?years=2020,2021,2022,2023,2024,2025,2026&page=1&pageSize=500000&_ts=${Date.now()}`;
-  const res = await fetchWithRetry(url);
-  const payload = await res.json();
-  const raw = Array.isArray(payload) ? payload : (payload?.rows ?? []);
+  const raw = await safeFetch(url);
+  if (!raw) return [];
   return raw.map(mapRow);
 }
 
-// ==================== FETCH TABLA (para dashboard y pareto) ====================
+// ==================== FETCH TABLA (dashboard / pareto) ====================
+// Igual: solo cache, nunca despierta Azure.
 
 export async function fetchTableMulti(
   f: FiltersMulti
@@ -193,11 +149,8 @@ export async function fetchTableMulti(
   qs.set('_ts',      String(Date.now()));
 
   const url = `${API_URL}/api/datos/${TABLE}?${qs.toString()}`;
-  const res = await fetchWithRetry(url);
+  const raw = await safeFetch(url);
+  if (!raw) return { total: 0, rows: [] };
 
-  const payload = await res.json();
-  const raw     = Array.isArray(payload) ? payload : (payload?.rows ?? []);
-  const total   = Array.isArray(payload) ? raw.length : (payload?.total ?? raw.length);
-
-  return { total, rows: raw.map(mapRow) };
+  return { total: raw.length, rows: raw.map(mapRow) };
 }
