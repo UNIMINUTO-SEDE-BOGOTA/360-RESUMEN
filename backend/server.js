@@ -170,6 +170,7 @@ app.get('/api/cache/warmup-status', (_req, res) => {
 // Cache: lanzar warmup manual (botón Actualizar)
 app.post('/api/cache/warmup', (_req, res) => {
   cache.clear();
+  warmupDone = false; // <-- ponlo AQUÍ, antes de responder
   res.json({ message: 'Warmup iniciado', entries: 0 });
   warmupCache().catch(console.error); // corre en background
 });
