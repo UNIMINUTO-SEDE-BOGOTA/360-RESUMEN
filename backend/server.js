@@ -2,24 +2,119 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import sql from 'mssql';
+import { Redis } from '@upstash/redis';
 
-console.log('✅ Azure SQL activo');
+console.log('✅ Servidor iniciando...');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ==================== UPSTASH REDIS ====================
+// Variables requeridas en .env / Render Environment Variables:
+//   UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
+//   UPSTASH_REDIS_REST_TOKEN=AXxx...
+
+const redis = new Redis({
+  url:   process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+const CACHE_TTL_SECONDS = 60 * 60; // 1 hora (Redis usa segundos)
+
+// Cache en memoria como capa rápida (evita llamadas HTTP a Redis en cada request)
+const memCache = new Map();
+const MEM_TTL  = 1000 * 60 * 60; // 1 hora en ms
+
+function getMemCache(key) {
+  const item = memCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.ts > MEM_TTL) { memCache.delete(key); return null; }
+  return item.data;
+}
+
+function setMemCache(key, data) {
+  memCache.set(key, { data, ts: Date.now() });
+}
+
+// Obtener dato: memoria → Redis
+async function getCache(key) {
+  // 1. Memoria
+  const mem = getMemCache(key);
+  if (mem !== null) return mem;
+
+  // 2. Redis
+  try {
+    const val = await redis.get(key);
+    if (val !== null) {
+      setMemCache(key, val); // llenar memoria para próximas requests
+      return val;
+    }
+  } catch (err) {
+    console.warn('⚠️ Redis get error:', err.message);
+  }
+  return null;
+}
+
+// Guardar dato: memoria + Redis
+async function setCache(key, data) {
+  setMemCache(key, data);
+  try {
+    await redis.set(key, data, { ex: CACHE_TTL_SECONDS });
+  } catch (err) {
+    console.warn('⚠️ Redis set error:', err.message);
+  }
+}
+
+// Limpiar todo el cache
+async function clearAllCache() {
+  memCache.clear();
+  try {
+    await redis.flushdb();
+    console.log('🗑️  Cache Redis limpiado');
+  } catch (err) {
+    console.warn('⚠️ Redis flush error:', err.message);
+  }
+}
+
+// Precargar memoria desde Redis al arrancar
+async function loadCacheFromRedis() {
+  try {
+    const keys = await redis.keys('*');
+    if (!keys.length) {
+      console.log('ℹ️  Redis vacío. Usa el botón "Actualizar" para cargar datos.');
+      return;
+    }
+    let loaded = 0;
+    // Cargar en bloques de 50 para no saturar
+    for (let i = 0; i < keys.length; i += 50) {
+      const chunk = keys.slice(i, i + 50);
+      const values = await redis.mget(...chunk);
+      chunk.forEach((key, idx) => {
+        if (values[idx] !== null) {
+          setMemCache(key, values[idx]);
+          loaded++;
+        }
+      });
+    }
+    console.log(`✅ Cache cargado desde Redis: ${loaded} entradas en memoria`);
+  } catch (err) {
+    console.warn('⚠️ No se pudo precargar desde Redis:', err.message);
+  }
+}
+
 // ==================== CONFIGURACIÓN AZURE SQL ====================
 
 const config = {
-  user: process.env.AZURE_SQL_USER,
+  user:     process.env.AZURE_SQL_USER,
   password: process.env.AZURE_SQL_PASSWORD,
-  server: process.env.AZURE_SQL_SERVER,
+  server:   process.env.AZURE_SQL_SERVER,
   database: process.env.AZURE_SQL_DATABASE,
   options: {
-    encrypt: true,
+    encrypt:                true,
     trustServerCertificate: false,
-    connectTimeout: 30000,
-    requestTimeout: 30000,
+    connectTimeout:         30000,
+    requestTimeout:         30000,
   },
   pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
 };
@@ -29,41 +124,30 @@ let dbConnected = false;
 
 async function connectDB() {
   try {
-    pool = await sql.connect(config);
+    if (pool) { try { await pool.close(); } catch {} }
+    pool        = await sql.connect(config);
     dbConnected = true;
-    console.log('✅ Conectado exitosamente a Azure SQL Database');
-    console.log(`   Servidor: ${config.server}`);
+    console.log('✅ Conectado a Azure SQL Database');
+    console.log(`   Servidor:      ${config.server}`);
     console.log(`   Base de datos: ${config.database}`);
   } catch (err) {
     dbConnected = false;
     console.error('❌ Error al conectar a Azure SQL:', getErrorMessage(err));
+    throw err;
   }
 }
 
-// ==================== HELPERS ====================
+function poolReady() {
+  return dbConnected && pool && pool.connected;
+}
 
-const cache = new Map();
-const CACHE_TTL = 1000 * 60 * 60; // 1 hora
+// ==================== HELPERS ====================
 
 const normalize = (s = '') =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
 const findColumn = (cols, ...names) =>
   cols.find(c => names.some(name => normalize(c) === normalize(name)));
-
-function getCache(key) {
-  const item = cache.get(key);
-  if (!item) return null;
-  if (Date.now() - item.timestamp > CACHE_TTL) {
-    cache.delete(key);
-    return null;
-  }
-  return item.data;
-}
-
-function setCache(key, data) {
-  cache.set(key, { data, timestamp: Date.now() });
-}
 
 function getErrorMessage(err) {
   if (err instanceof Error) return err.message;
@@ -84,9 +168,20 @@ function sendPaused(res) {
     errorCode: 'AZURE_SQL_PAUSED',
     message:
       'La base de datos Azure SQL está pausada por haber alcanzado el límite gratuito del mes. ' +
-      'Puedes reanudarla en Azure Portal: SQL Database → Compute + storage → "Continue using database with additional charges". ' +
+      'Puedes reanudarla en Azure Portal: SQL Database → Compute + storage → ' +
+      '"Continue using database with additional charges". ' +
       'Se reanudará automáticamente el 01 del próximo mes (00:00 UTC).',
     docs: 'https://go.microsoft.com/fwlink/?linkid=2243105&clcid=0x409',
+  });
+}
+
+function sendNoCacheNoDB(res) {
+  return res.status(503).json({
+    errorCode: 'NO_DATA',
+    message:
+      'No hay datos en cache y la base de datos no está conectada. ' +
+      'Usa el botón "Actualizar" para conectar y cargar los datos.',
+    cached: false,
   });
 }
 
@@ -100,21 +195,16 @@ function buildRectoriaFilter() {
   `;
 }
 
-function poolReady() {
-  return dbConnected && pool && pool.connected;
-}
-// ==================== WARMUP CACHE ====================
+// ==================== WARMUP ====================
 
-// Se declara DESPUÉS de cache, helpers y PORT
 const PORT = process.env.PORT || 3001;
-
 let warmupDone = false;
 
 async function warmupCache() {
   warmupDone = false;
   console.log('🔥 Iniciando pre-calentamiento de cache...');
 
-  const base = `http://localhost:${PORT}`;
+  const base  = `http://localhost:${PORT}`;
   const years = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
 
   const tasks = [
@@ -130,85 +220,75 @@ async function warmupCache() {
 
   await Promise.allSettled(tasks);
   warmupDone = true;
-  console.log(`✅ Cache pre-calentado: ${cache.size} entradas`);
+  console.log(`✅ Cache pre-calentado: ${memCache.size} entradas en memoria`);
 }
+
 // ==================== ENDPOINTS ====================
 
 // Cache: limpiar
-app.post('/api/cache/clear', (_req, res) => {
-  cache.clear();
-  res.json({ message: 'Cache limpiado correctamente', entries: 0 });
+app.post('/api/cache/clear', async (_req, res) => {
+  await clearAllCache();
+  res.json({ message: 'Cache limpiado (memoria + Redis)', entries: 0 });
 });
 
 // Cache: info
 app.get('/api/cache/info', (_req, res) => {
-  res.json({ entries: cache.size, keys: [...cache.keys()], dbConnected });
+  res.json({ entries: memCache.size, keys: [...memCache.keys()], dbConnected });
 });
 
 // Cache: estado del warmup
 app.get('/api/cache/warmup-status', (_req, res) => {
-  res.json({ done: warmupDone, entries: cache.size });
+  res.json({ done: warmupDone, entries: memCache.size });
 });
 
-// Cache: lanzar warmup manual (botón Actualizar)
+// Cache: lanzar warmup manual — ÚNICO punto que enciende Azure SQL
 app.post('/api/cache/warmup', async (_req, res) => {
+  // Responder de inmediato para no bloquear al cliente
+  res.json({ message: 'Warmup iniciado. Conectando a Azure SQL...', entries: memCache.size });
+
   try {
-    await connectDB(); // 🔥 esto enciende Azure
-    cache.clear();
+    await connectDB();
+    await clearAllCache();
     warmupDone = false;
-
-    res.json({ message: 'Warmup iniciado', entries: 0 });
-
-    await warmupCache(); // carga todo
+    await warmupCache();
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error en warmup:', getErrorMessage(err));
   }
 });
 
-// Salud
-
+// Health
 app.get('/api/health', (_req, res) => {
   res.json({
-    status: 'ok',
+    status:    'ok',
     connected: poolReady(),
-    cache: cache.size > 0
+    cache:     memCache.size > 0,
   });
 });
 
-
 // Status
-
 app.get('/api/status', (_req, res) => {
   res.json({
-    paused: !poolReady(),
+    paused:    !poolReady(),
     connected: poolReady(),
-    cache: cache.size > 0
+    cache:     memCache.size > 0,
   });
 });
 
 // Tablas
 app.get('/api/tablas', async (_req, res) => {
   const cacheKey = 'tablas_list';
-  try {
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟢 Cache usado (/api/tablas)'); return res.json(cached); }
-    
-if (!poolReady()) {
-  return res.status(503).json({
-    error: 'Base de datos apagada',
-    cached: false
-  });
-}
+  const cached   = await getCache(cacheKey);
+  if (cached) { console.log('🟢 Cache usado (/api/tablas)'); return res.json(cached); }
+  if (!poolReady()) return sendNoCacheNoDB(res);
 
+  try {
     const result = await pool.request().query(`
       SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
       WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME
     `);
-    setCache(cacheKey, result.recordset);
+    await setCache(cacheKey, result.recordset);
     res.json(result.recordset);
   } catch (err) {
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟡 BD caída → usando cache (/api/tablas)'); return res.json(cached); }
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: getErrorMessage(err) });
   }
@@ -217,31 +297,23 @@ if (!poolReady()) {
 // Estructura de tabla
 app.get('/api/tablas/:nombre/estructura', async (req, res) => {
   const { nombre } = req.params;
-  const cacheKey = `estructura_${nombre}`;
-  try {
-    const cached = getCache(cacheKey);
-    if (cached) return res.json(cached);
-    
-if (!poolReady()) {
-  return res.status(503).json({
-    error: 'Base de datos apagada',
-    cached: false
-  });
-}
+  const cacheKey   = `estructura_${nombre}`;
+  const cached     = await getCache(cacheKey);
+  if (cached) return res.json(cached);
+  if (!poolReady()) return sendNoCacheNoDB(res);
 
+  try {
     const result = await pool.request()
       .input('tableName', sql.NVarChar, nombre)
       .query(`
-        SELECT COLUMN_NAME as columna, DATA_TYPE as tipo,
-               IS_NULLABLE as nullable, CHARACTER_MAXIMUM_LENGTH as longitud
+        SELECT COLUMN_NAME AS columna, DATA_TYPE AS tipo,
+               IS_NULLABLE AS nullable, CHARACTER_MAXIMUM_LENGTH AS longitud
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_NAME = @tableName ORDER BY ORDINAL_POSITION
       `);
-    setCache(cacheKey, result.recordset);
+    await setCache(cacheKey, result.recordset);
     res.json(result.recordset);
   } catch (err) {
-    const cached = getCache(cacheKey);
-    if (cached) return res.json(cached);
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: getErrorMessage(err) });
   }
@@ -255,18 +327,14 @@ app.get('/api/filtros/years', (_req, res) => {
 // ===================== /api/colaboradores =====================
 app.get('/api/colaboradores', async (req, res) => {
   const cacheKey = `colaboradores_${JSON.stringify(req.query)}`;
-  try {
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟢 Cache usado (/api/colaboradores)'); return res.json(cached); }
+  const cached   = await getCache(cacheKey);
+  if (cached) { console.log('🟢 Cache usado (/api/colaboradores)'); return res.json(cached); }
+  if (!poolReady()) return sendNoCacheNoDB(res);
 
-if (!poolReady()) {
-  return res.status(503).json({
-    error: 'Base de datos apagada',
-    cached: false
-  });
-}
+  try {
     const where = [];
-    const r = pool.request();
+    const r     = pool.request();
+
     where.push(`
       LOWER(LTRIM(RTRIM(
         REPLACE(REPLACE(REPLACE(REPLACE(
@@ -274,29 +342,32 @@ if (!poolReady()) {
         'á','a'),'é','e'),'í','i'),'ó','o')
       ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
     `);
+
     if (req.query.periodo) {
       r.input('periodo', sql.NVarChar, req.query.periodo);
       where.push(`[Periodo] = @periodo`);
     }
+
     const sqlQuery = `
       SELECT
-        [Modalidad] AS modalidad, [Género] AS genero,
-        [Tipo de trabajador] AS tipo,
+        [Modalidad]                          AS modalidad,
+        [Género]                             AS genero,
+        [Tipo de trabajador]                 AS tipo,
         [Máximo nivel de formación obtenido] AS nivelFormacion,
-        [Dedicación] AS dedicacion,
-        [Categoría en el escalafón docente] AS escalafon,
-        [Tipo de contrato] AS tipoContrato,
-        [Duración del contrato] AS duracionContrato,
-        [Numero de trabajadores] AS total
-      FROM Colaboradores WHERE ${where.join(' AND ')}
+        [Dedicación]                         AS dedicacion,
+        [Categoría en el escalafón docente]  AS escalafon,
+        [Tipo de contrato]                   AS tipoContrato,
+        [Duración del contrato]              AS duracionContrato,
+        [Numero de trabajadores]             AS total
+      FROM Colaboradores
+      WHERE ${where.join(' AND ')}
     `;
+
     const result = await r.query(sqlQuery);
-    setCache(cacheKey, result.recordset);
+    await setCache(cacheKey, result.recordset);
     res.json(result.recordset);
   } catch (err) {
     console.error('❌ Error /api/colaboradores:', err);
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟡 BD caída → usando cache'); return res.json(cached); }
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: err.message });
   }
@@ -305,16 +376,11 @@ if (!poolReady()) {
 // ===================== /api/comparativos =====================
 app.get('/api/comparativos', async (req, res) => {
   const cacheKey = `comparativos_${JSON.stringify(req.query)}`;
-  try {
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟢 Cache usado (/api/comparativos)'); return res.json(cached); }
+  const cached   = await getCache(cacheKey);
+  if (cached) { console.log('🟢 Cache usado (/api/comparativos)'); return res.json(cached); }
+  if (!poolReady()) return sendNoCacheNoDB(res);
 
-if (!poolReady()) {
-  return res.status(503).json({
-    error: 'Base de datos apagada',
-    cached: false
-  });
-}
+  try {
     const filtroPeriodo = `
       (CASE
         WHEN REPLACE(UPPER(CONVERT(NVARCHAR(30), [Periodo])), ' ', '') LIKE 'S1%' THEN 'S1'
@@ -323,21 +389,23 @@ if (!poolReady()) {
         ELSE ''
       END) IN ('S1','Q1')
     `;
+
     const query = `
       SELECT [Año], [Modalidad], [Nivel Académico], [Nivel de Formación],
              SUM([Estudiantes Totales]) AS total
       FROM [Poblacion_Estudiantil]
-      WHERE ${buildRectoriaFilter()} AND [Año] IN (2025, 2026) AND ${filtroPeriodo}
+      WHERE ${buildRectoriaFilter()}
+        AND [Año] IN (2025, 2026)
+        AND ${filtroPeriodo}
       GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación]
     `;
+
     const result = await pool.request().query(query);
     console.log('✅ comparativos rows:', result.recordset.length);
-    setCache(cacheKey, result.recordset);
+    await setCache(cacheKey, result.recordset);
     res.json(result.recordset);
   } catch (err) {
     console.error('❌ Error comparativos:', err);
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟡 BD caída → usando cache'); return res.json(cached); }
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: err.message });
   }
@@ -346,18 +414,14 @@ if (!poolReady()) {
 // ===================== /api/oferta-activa =====================
 app.get('/api/oferta-activa', async (req, res) => {
   const cacheKey = `oferta_activa_${JSON.stringify(req.query)}`;
-  try {
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟢 Cache usado (/api/oferta-activa)'); return res.json(cached); }
+  const cached   = await getCache(cacheKey);
+  if (cached) { console.log('🟢 Cache usado (/api/oferta-activa)'); return res.json(cached); }
+  if (!poolReady()) return sendNoCacheNoDB(res);
 
-if (!poolReady()) {
-  return res.status(503).json({
-    error: 'Base de datos apagada',
-    cached: false
-  });
-}
+  try {
     const where = [];
-    const r = pool.request();
+    const r     = pool.request();
+
     where.push(`
       LOWER(LTRIM(RTRIM(
         REPLACE(REPLACE(REPLACE(REPLACE(
@@ -365,6 +429,7 @@ if (!poolReady()) {
         'á','a'),'é','e'),'í','i'),'ó','o')
       ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
     `);
+
     if (req.query.estado !== 'todos') {
       where.push(`
         LOWER(LTRIM(RTRIM(
@@ -380,37 +445,44 @@ if (!poolReady()) {
       r.input('nivel', sql.NVarChar, req.query.nivel);
       where.push(`[NIVEL DE FORMACIÓN] COLLATE Latin1_General_CI_AI = @nivel COLLATE Latin1_General_CI_AI`);
     }
+
     const sqlQuery = `
       SELECT
-        [FACULTAD] AS facultad, [REGISTRO ÚNICO] AS registroUnico,
-        [RESOLUCIÓN] AS resolucion, [CÓDIGO SNIES] AS codigoSnies,
-        [CODIGO BANNER] AS codigoBanner,
-        [DENOMINACIÓN DEL PROGRAMA] AS denominacion,
-        [NIVEL DE FORMACIÓN] AS nivelFormacion, [MODALIDAD] AS modalidad,
-        [PERIODICIDAD DE ADMISIÓN] AS periodicidad,
-        [DURACIÓN DEL PROGRAMA] AS duracion, [CRÉDITOS DEL PROGRAMA] AS creditos,
-        [CUPOS] AS cupos, [RECTORÍA DUEÑA DEL PROGRAMA] AS rectoria,
-        [DEPARTAMENTO (SEDE DEL PROGRAMA)] AS departamento,
-        [MUNICIPIO (SEDE DEL PROGRAMA)] AS municipio,
-        [COBERTURA DEL PROGRAMA] AS cobertura, [Tipo] AS tipo,
-        [ESTADO (activo - inactivo)] AS estado,
-        [FECHA RESOLUCIÓN] AS fechaResolucion,
-        [FECHA DE VENCIMIENTO] AS fechaVencimiento,
-        [RESOLUCIÓN DE ACREDITACIÓN] AS resolucionAcreditacion,
-        [FECHA ACREDITACIÓN] AS fechaAcreditacion,
-        [VIGENCIA (AÑOS)] AS vigencia, [ACREDITADOS] AS acreditados
+        [FACULTAD]                           AS facultad,
+        [REGISTRO ÚNICO]                     AS registroUnico,
+        [RESOLUCIÓN]                         AS resolucion,
+        [CÓDIGO SNIES]                       AS codigoSnies,
+        [CODIGO BANNER]                      AS codigoBanner,
+        [DENOMINACIÓN DEL PROGRAMA]          AS denominacion,
+        [NIVEL DE FORMACIÓN]                 AS nivelFormacion,
+        [MODALIDAD]                          AS modalidad,
+        [PERIODICIDAD DE ADMISIÓN]           AS periodicidad,
+        [DURACIÓN DEL PROGRAMA]              AS duracion,
+        [CRÉDITOS DEL PROGRAMA]              AS creditos,
+        [CUPOS]                              AS cupos,
+        [RECTORÍA DUEÑA DEL PROGRAMA]        AS rectoria,
+        [DEPARTAMENTO (SEDE DEL PROGRAMA)]   AS departamento,
+        [MUNICIPIO (SEDE DEL PROGRAMA)]      AS municipio,
+        [COBERTURA DEL PROGRAMA]             AS cobertura,
+        [Tipo]                               AS tipo,
+        [ESTADO (activo - inactivo)]         AS estado,
+        [FECHA RESOLUCIÓN]                   AS fechaResolucion,
+        [FECHA DE VENCIMIENTO]               AS fechaVencimiento,
+        [RESOLUCIÓN DE ACREDITACIÓN]         AS resolucionAcreditacion,
+        [FECHA ACREDITACIÓN]                 AS fechaAcreditacion,
+        [VIGENCIA (AÑOS)]                    AS vigencia,
+        [ACREDITADOS]                        AS acreditados
       FROM [Oferta_Activa]
       WHERE ${where.join(' AND ')}
       ORDER BY [NIVEL DE FORMACIÓN], [MODALIDAD], [DENOMINACIÓN DEL PROGRAMA]
     `;
+
     const result = await r.query(sqlQuery);
     console.log('✅ oferta-activa rows:', result.recordset.length);
-    setCache(cacheKey, result.recordset);
+    await setCache(cacheKey, result.recordset);
     res.json(result.recordset);
   } catch (err) {
     console.error('❌ Error /api/oferta-activa:', err);
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟡 BD caída → usando cache'); return res.json(cached); }
     if (isPausedDbError(err)) return sendPaused(res);
     res.status(500).json({ error: getErrorMessage(err) });
   }
@@ -421,22 +493,19 @@ app.get('/api/datos/:tabla', async (req, res) => {
   const rawTabla = req.params.tabla;
   const cacheKey = `datos_${normalize(rawTabla)}_${JSON.stringify(req.query)}`;
 
-  const cachedEarly = getCache(cacheKey);
-  if (cachedEarly) { console.log('🟢 Cache usado (/api/datos) [cache-first]'); return res.json(cachedEarly); }
+  // Cache-first
+  const cachedEarly = await getCache(cacheKey);
+  if (cachedEarly) {
+    console.log('🟢 Cache usado (/api/datos) [cache-first]');
+    return res.json(cachedEarly);
+  }
 
-  
-if (!poolReady()) {
-  return res.status(503).json({
-    errorCode: 'DB_OFFLINE',
-    message: 'Base apagada y sin cache disponible',
-    cached: false,
-  });
-}
+  if (!poolReady()) return sendNoCacheNoDB(res);
 
   let realTableName = null;
 
   try {
-    const AI = 'Latin1_General_CI_AI';
+    const AI       = 'Latin1_General_CI_AI';
     const page     = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(10000, Math.max(100, Number(req.query.pageSize) || 1000));
     const offset   = (page - 1) * pageSize;
@@ -452,17 +521,29 @@ if (!poolReady()) {
     const facultadesCSV       = (req.query.facultades       ?? '').toString();
     const sedesCSV            = (req.query.sedes            ?? '').toString();
 
+    // Resolver nombre real de la tabla
     const validTables = await pool.request().query(`
       SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'
     `);
     for (const row of validTables.recordset) {
-      if (normalize(row.TABLE_NAME) === normalize(rawTabla)) { realTableName = row.TABLE_NAME; break; }
+      if (normalize(row.TABLE_NAME) === normalize(rawTabla)) {
+        realTableName = row.TABLE_NAME;
+        break;
+      }
     }
-    if (!realTableName) return res.status(404).json({ error: 'Tabla no encontrada', solicitada: rawTabla });
+    if (!realTableName) {
+      return res.status(404).json({ error: 'Tabla no encontrada', solicitada: rawTabla });
+    }
 
+    // Obtener columnas
     const cols = await pool.request()
       .input('t', sql.NVarChar, realTableName)
-      .query(`SELECT COLUMN_NAME, ORDINAL_POSITION FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @t ORDER BY ORDINAL_POSITION`);
+      .query(`
+        SELECT COLUMN_NAME, ORDINAL_POSITION
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = @t
+        ORDER BY ORDINAL_POSITION
+      `);
     const colNames          = cols.recordset.map(r => r.COLUMN_NAME);
     const nivelCol          = findColumn(colNames, 'Nivel Académico');
     const nivelFormacionCol = findColumn(colNames, 'Nivel de Formación', 'Nivel Formacion');
@@ -471,7 +552,9 @@ if (!poolReady()) {
     const programaCol       = findColumn(colNames, 'Programa Académico', 'Programa', 'ProgramaAcademico');
     const rectoriaCo        = findColumn(colNames, 'Rectoría', 'Rectoria', 'Sede');
     const hasAnyo           = colNames.some(c => c.toLowerCase() === 'año' || c.toLowerCase() === 'ano');
-    const orderByClause     = hasAnyo ? 'ORDER BY [Año] DESC' : `ORDER BY [${cols.recordset[0]?.COLUMN_NAME || '1'}]`;
+    const orderByClause     = hasAnyo
+      ? 'ORDER BY [Año] DESC'
+      : `ORDER BY [${cols.recordset[0]?.COLUMN_NAME || '1'}]`;
 
     const where    = [];
     const reqData  = pool.request();
@@ -490,7 +573,10 @@ if (!poolReady()) {
     if (periodicidadesCSV && periodicidadCol) {
       reqData.input('perio', sql.NVarChar, periodicidadesCSV);
       reqCount.input('perio', sql.NVarChar, periodicidadesCSV);
-      where.push(`LOWER(LTRIM(RTRIM(CONVERT(NVARCHAR(100), [${periodicidadCol}] COLLATE Latin1_General_CI_AI)))) IN (SELECT LOWER(LTRIM(RTRIM(value))) FROM STRING_SPLIT(@perio, ','))`);
+      where.push(`
+        LOWER(LTRIM(RTRIM(CONVERT(NVARCHAR(100), [${periodicidadCol}] COLLATE Latin1_General_CI_AI))))
+        IN (SELECT LOWER(LTRIM(RTRIM(value))) FROM STRING_SPLIT(@perio, ','))
+      `);
     }
     if (facultadesCSV && facultadCol) {
       reqData.input('facs', sql.NVarChar, facultadesCSV);
@@ -553,30 +639,43 @@ if (!poolReady()) {
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
     const dataSql = `
-      SELECT [Año],[Modalidad],[Nivel Académico],[Nivel de Formación],[Facultad],
-             [Centro Universitario],[Centro de Operación],[Programa Académico],
-             [Estudiantes Nuevos],[Estudiantes Continuos],[Estudiantes Totales],
-             [Periodo],[Periodicidad],[Rectoría]
-      FROM [${realTableName}] ${whereSql}
+      SELECT
+        [Año], [Modalidad], [Nivel Académico], [Nivel de Formación],
+        [Facultad], [Centro Universitario], [Centro de Operación],
+        [Programa Académico], [Estudiantes Nuevos], [Estudiantes Continuos],
+        [Estudiantes Totales], [Periodo], [Periodicidad], [Rectoría]
+      FROM [${realTableName}]
+      ${whereSql}
       ${orderByClause}
       OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY
     `;
     const countSql = `SELECT COUNT(*) AS total FROM [${realTableName}] ${whereSql}`;
 
-    const [dataR, countR] = await Promise.all([reqData.query(dataSql), reqCount.query(countSql)]);
+    const [dataR, countR] = await Promise.all([
+      reqData.query(dataSql),
+      reqCount.query(countSql),
+    ]);
 
-    const response = { page, pageSize, total: countR.recordset[0]?.total || 0, rows: dataR.recordset, fromCache: false };
-    setCache(cacheKey, response);
+    const response = {
+      page,
+      pageSize,
+      total:     countR.recordset[0]?.total || 0,
+      rows:      dataR.recordset,
+      fromCache: false,
+    };
+    await setCache(cacheKey, response);
     console.log(`✅ /api/datos/${realTableName} → ${response.rows.length} filas`);
     res.json(response);
 
   } catch (err) {
     console.error('❌ Error /api/datos:', err);
     console.error('   Tabla solicitada:', rawTabla, '| Tabla resuelta:', realTableName ?? 'N/A');
-    const cached = getCache(cacheKey);
-    if (cached) { console.log('🟡 BD caída → usando cache (/api/datos)'); return res.json({ ...cached, fromCache: true }); }
     if (isPausedDbError(err)) return sendPaused(res);
-    res.status(500).json({ error: 'No se pudo obtener datos y no hay cache disponible.', detail: getErrorMessage(err), table: rawTabla });
+    res.status(500).json({
+      error:  'No se pudo obtener datos y no hay cache disponible.',
+      detail: getErrorMessage(err),
+      table:  rawTabla,
+    });
   }
 });
 
@@ -584,14 +683,12 @@ if (!poolReady()) {
 app.post('/api/query', async (req, res) => {
   try {
     const { query } = req.body;
-    if (!/^\s*select\b/i.test(query)) return res.status(403).json({ error: 'Solo se permiten consultas SELECT' });
-    
-if (!poolReady()) {
-  return res.status(503).json({
-    error: 'Base de datos apagada'
-  });
-}
-
+    if (!/^\s*select\b/i.test(query)) {
+      return res.status(403).json({ error: 'Solo se permiten consultas SELECT' });
+    }
+    if (!poolReady()) {
+      return res.status(503).json({ error: 'Base de datos no conectada. Usa el botón Actualizar.' });
+    }
     const r = await pool.request().query(query);
     res.json(r.recordset);
   } catch (err) {
@@ -609,7 +706,6 @@ app.use((err, _req, res, _next) => {
 // ==================== KEEPALIVE (evita sleep en Render free) ====================
 function startKeepalive() {
   const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-  
   setInterval(async () => {
     try {
       await fetch(`${SELF_URL}/api/health`);
@@ -617,21 +713,20 @@ function startKeepalive() {
     } catch (e) {
       console.warn('⚠️ Keepalive falló:', e.message);
     }
-  }, 10 * 60 * 1000); // cada 10 minutos
+  }, 10 * 60 * 1000);
 }
 
 // ==================== INICIO ====================
-app.listen(PORT, async () => {
-  console.log(`🚀 Servidor en puerto ${PORT}`);
-  try {
-    
-console.log('🟢 Servidor iniciado en modo offline');
-startKeepalive();
+// Precargar cache desde Redis ANTES de abrir el puerto
+await loadCacheFromRedis();
 
-  } catch (err) {
-    console.error('⚠️  No se pudo conectar al inicio:', getErrorMessage(err));
-  }
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor en puerto ${PORT}`);
+  console.log(`🟢 Modo offline activo — entradas en memoria: ${memCache.size}`);
+  console.log(`ℹ️  Para recargar datos: POST /api/cache/warmup`);
+  startKeepalive();
 });
+
 process.on('SIGINT', async () => {
   console.log('\n👋 Cerrando servidor...');
   if (pool) { try { await pool.close(); } catch {} }
