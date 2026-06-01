@@ -849,6 +849,17 @@ useEffect(() => {
     🔒 Admin
   </button>
 )}
+           {/* ✅ BOTÓN 360 — agregar aquí */}
+  <button
+    onClick={() => window.open(
+      "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
+      "_blank"
+    )}
+    className="bg-slate-800 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1.5 hover:bg-slate-700"
+  >
+    <Gauge size={15} /> 360
+  </button>
+
 
 {/* Modal login admin */}
 {showLoginModal && (
