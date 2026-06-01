@@ -39,47 +39,60 @@ function setMemCache(key, data) {
 
 // Obtener dato: memoria → Redis
 async function getCache(key) {
-  // 1. Memoria
-  const mem = getMemCache(key);
-  if (mem !== null) return mem;
 
-  // 2. Redis
   try {
     const val = await redis.get(key);
+
     if (val !== null) {
-      setMemCache(key, val); // llenar memoria para próximas requests
-      return val;
+      const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+      setMemCache(key, parsed);
+      return parsed;
     }
+
   } catch (err) {
     console.warn('⚠️ Redis get error:', err.message);
   }
+
+  const mem = getMemCache(key);
+  if (mem !== null) return mem;
+
   return null;
 }
-
 // Guardar dato: memoria + Redis
+
+
 async function setCache(key, data) {
   setMemCache(key, data);
+
   try {
-    if (CACHE_TTL_SECONDS > 0) {
-      await redis.set(key, data, { ex: CACHE_TTL_SECONDS });
-    } else {
-      await redis.set(key, data); // sin expiración
-    }
+    await redis.set(key, JSON.stringify(data));
+    console.log(`🟣 Guardado en Redis: ${key}`);
   } catch (err) {
     console.warn('⚠️ Redis set error:', err.message);
   }
 }
 
+
 // Limpiar todo el cache
 async function clearAllCache() {
   memCache.clear();
+
   try {
-    await redis.flushdb();
-    console.log('🗑️  Cache Redis limpiado');
+    const keys = await redis.keys('*');
+
+    if (keys.length > 0) {
+      for (let i = 0; i < keys.length; i += 50) {
+        const chunk = keys.slice(i, i + 50);
+        await redis.del(...chunk);
+      }
+    }
+
+    console.log(`🗑️ Redis limpiado: ${keys.length} keys`);
   } catch (err) {
-    console.warn('⚠️ Redis flush error:', err.message);
+    console.warn('⚠️ Redis clear error:', err.message);
   }
 }
+
 
 // Precargar memoria desde Redis al arrancar
 async function loadCacheFromRedis() {
@@ -224,7 +237,12 @@ async function warmupCache() {
 
   await Promise.allSettled(tasks);
   warmupDone = true;
-  console.log(`✅ Cache pre-calentado: ${memCache.size} entradas en memoria`);
+  
+console.log(`✅ Cache pre-calentado:
+- Memoria: ${memCache.size}
+- Redis: ${redisKeys.length}
+  `);
+
 }
 
 // ==================== ENDPOINTS ====================
@@ -236,8 +254,23 @@ app.post('/api/cache/clear', async (_req, res) => {
 });
 
 // Cache: info
-app.get('/api/cache/info', (_req, res) => {
-  res.json({ entries: memCache.size, keys: [...memCache.keys()], dbConnected });
+app.get('/api/cache/info', async (_req, res) => {
+  try {
+    const keys = await redis.keys('*');
+
+    res.json({
+      memEntries: memCache.size,
+      redisEntries: keys.length,
+      dbConnected
+    });
+
+  } catch (err) {
+    res.json({
+      memEntries: memCache.size,
+      redisEntries: 'error',
+      error: err.message
+    });
+  }
 });
 
 // Cache: estado del warmup
