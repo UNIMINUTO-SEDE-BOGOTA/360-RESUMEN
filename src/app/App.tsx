@@ -19,7 +19,25 @@ import ComparativosView from "./components/ComparativosView";
 import { OfertaView } from "./components/OfertaView";
 import { InvestigacionView } from "./components/InvestigacionView";
 
+// Estado de autenticación admin
+const [isAdmin, setIsAdmin] = useState(false);
+const [showLoginModal, setShowLoginModal] = useState(false);
+const [adminInput, setAdminInput] = useState('');
+const [loginError, setLoginError] = useState('');
 
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY; // en .env del frontend
+
+// Login admin
+const handleAdminLogin = () => {
+  if (adminInput === ADMIN_KEY) {
+    setIsAdmin(true);
+    setShowLoginModal(false);
+    setLoginError('');
+    setAdminInput('');
+  } else {
+    setLoginError('Clave incorrecta');
+  }
+};
 const API_URL =
   (typeof import.meta !== "undefined" &&
     (import.meta as any).env &&
@@ -641,7 +659,10 @@ const forceRefresh = async () => {
  
   try {
     // 1. Lanza warmup en backend (conecta Azure y recarga Redis)
-    await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST' });
+    await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST', HEADERS: {
+       'x-admin-key': ADMIN_KEY  // solo admin tiene esta clave
+    }
+    });
  
     // 2. Polling hasta que el warmup termine (máx 60s)
     const maxWait  = 60_000;
@@ -808,22 +829,56 @@ useEffect(() => {
 
         {/* ACCIONES */}
         <div className="flex gap-2">
-          <button
-            onClick={forceRefresh}
-            className="bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-blue-700 flex items-center gap-1.5 text-xs sm:text-sm font-medium"
-          >
-            <RefreshCw size={15} />
-            <span>Actualizar</span>
-          </button>
-          <button
-            onClick={() => window.open(
-              "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
-              "_blank"
-            )}
-            className="bg-slate-800 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1.5 hover:bg-slate-700"
-          >
-            <Gauge size={15} /> 360
-          </button>
+          
+{/* Botón Actualizar — solo admin */}
+{isAdmin ? (
+  <button
+    onClick={forceRefresh}
+    className="bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 text-xs font-medium hover:bg-blue-700"
+  >
+    <RefreshCw size={15} />
+    Actualizar
+  </button>
+) : (
+  <button
+    onClick={() => setShowLoginModal(true)}
+    className="bg-gray-200 text-gray-500 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-300"
+  >
+    🔒 Admin
+  </button>
+)}
+
+{/* Modal login admin */}
+{showLoginModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-80 flex flex-col gap-4 shadow-xl">
+      <h2 className="font-bold text-gray-800">Acceso Administrador</h2>
+      <input
+        type="password"
+        placeholder="Clave de administrador"
+        value={adminInput}
+        onChange={e => setAdminInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+        className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      {loginError && <p className="text-red-500 text-xs">{loginError}</p>}
+      <div className="flex gap-2 justify-end">
+        <button
+          onClick={() => { setShowLoginModal(false); setAdminInput(''); setLoginError(''); }}
+          className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleAdminLogin}
+          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Entrar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         </div>
 
         {/* TABS — scroll horizontal en móvil, sin wrap */}
