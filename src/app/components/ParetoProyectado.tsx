@@ -146,7 +146,7 @@ export function ParetoProyectado({
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
         {/* COLUMNA IZQUIERDA */}
-        <div className="flex flex-col gap-3>
+        <div className="flex flex-col gap-3">
 
           {/* TABLA 80% */}
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
