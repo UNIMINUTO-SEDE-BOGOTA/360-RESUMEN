@@ -9,6 +9,7 @@ console.log('✅ Servidor iniciando...');
 const app = express();
 app.use(cors());
 app.use(express.json());
+let ALLOW_DB = false;
 
 // ==================== UPSTASH REDIS ====================
 // Variables requeridas en .env / Render Environment Variables:
@@ -39,7 +40,11 @@ function setMemCache(key, data) {
 
 // Obtener dato: memoria → Redis
 async function getCache(key) {
+  // ✅ 1. PRIMERO memoria (rápido)
+  const mem = getMemCache(key);
+  if (mem !== null) return mem;
 
+  // ✅ 2. LUEGO Redis
   try {
     const val = await redis.get(key);
 
@@ -48,13 +53,9 @@ async function getCache(key) {
       setMemCache(key, parsed);
       return parsed;
     }
-
   } catch (err) {
     console.warn('⚠️ Redis get error:', err.message);
   }
-
-  const mem = getMemCache(key);
-  if (mem !== null) return mem;
 
   return null;
 }
@@ -153,9 +154,8 @@ async function connectDB() {
     throw err;
   }
 }
-
 function poolReady() {
-  return dbConnected && pool && pool.connected;
+  return ALLOW_DB && dbConnected && pool && pool.connected;
 }
 
 // ==================== HELPERS ====================
@@ -217,34 +217,46 @@ function buildRectoriaFilter() {
 const PORT = process.env.PORT || 3001;
 let warmupDone = false;
 
-async function warmupCache() {
-  warmupDone = false;
-  console.log('🔥 Iniciando pre-calentamiento de cache...');
+async function warmupCacheDirect() {
+  if (!poolReady()) {
+    console.warn('⚠️ BD no disponible para warmup');
+    return false;
+  }
 
-  const base  = `http://localhost:${PORT}`;
-  const years = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+  console.log('🔥 Warmup directo a BD...');
 
-  const tasks = [
-    fetch(`${base}/api/colaboradores`).catch(() => {}),
-    fetch(`${base}/api/comparativos`).catch(() => {}),
-    fetch(`${base}/api/oferta-activa`).catch(() => {}),
-    fetch(`${base}/api/oferta-activa?estado=todos`).catch(() => {}),
-    fetch(`${base}/api/datos/Poblacion_Estudiantil?pageSize=10000`).catch(() => {}),
-    ...years.map(y =>
-      fetch(`${base}/api/datos/Poblacion_Estudiantil?years=${y}&pageSize=10000`).catch(() => {})
-    ),
-  ];
+  let success = true;
 
-  await Promise.allSettled(tasks);
-  warmupDone = true;
-  
-console.log(`✅ Cache pre-calentado:
-- Memoria: ${memCache.size}
-- Redis: ${redisKeys.length}
-  `);
+  try {
+    const colaboradores = await pool.request().query(`
+      SELECT TOP 50000 * FROM Colaboradores
+    `);
+    await setCache('colaboradores_all', colaboradores.recordset);
+  } catch {
+    success = false;
+  }
 
+  try {
+    const oferta = await pool.request().query(`
+      SELECT TOP 50000 * FROM Oferta_Activa
+    `);
+    await setCache('oferta_activa_all', oferta.recordset);
+  } catch {
+    success = false;
+  }
+
+  try {
+    const poblacion = await pool.request().query(`
+      SELECT TOP 100000 * FROM Poblacion_Estudiantil
+      WHERE Año BETWEEN 2020 AND 2026
+    `);
+    await setCache('poblacion_all', poblacion.recordset);
+  } catch {
+    success = false;
+  }
+
+  return success;
 }
-
 // ==================== ENDPOINTS ====================
 
 // Cache: limpiar
@@ -280,9 +292,9 @@ app.get('/api/cache/warmup-status', (_req, res) => {
 
 // Cache: lanzar warmup manual — ÚNICO punto que enciende Azure SQL
 // Agregar este middleware solo para warmup
+
 app.post('/api/cache/warmup', async (req, res) => {
-  
-  // Verificar clave de admin
+
   const adminKey = req.headers['x-admin-key'];
   if (adminKey !== process.env.ADMIN_SECRET_KEY) {
     return res.status(401).json({ error: 'No autorizado' });
@@ -290,15 +302,38 @@ app.post('/api/cache/warmup', async (req, res) => {
 
   res.json({ message: 'Warmup iniciado...', entries: memCache.size });
 
+  
+try {
+  ALLOW_DB = true;
+
+  await connectDB();
+  await clearAllCache();
+
+  warmupDone = false;
+
+  const ok = await warmupCacheDirect();
+  warmupDone = ok;
+
+} catch (err) {
+  console.error('❌ Error en warmup:', getErrorMessage(err));
+} finally {
+
   try {
-    await connectDB();
-    await clearAllCache();
-    warmupDone = false;
-    await warmupCache();
-  } catch (err) {
-    console.error('❌ Error en warmup:', getErrorMessage(err));
+    if (pool) {
+      await pool.close();
+      console.log('🔌 Pool cerrado');
+    }
+  } catch (e) {
+    console.warn('⚠️ Error cerrando pool:', e.message);
   }
+
+  dbConnected = false;
+  ALLOW_DB = false;
+
+  console.log('✅ BD apagada después del warmup');
+  } 
 });
+
 // Health
 app.get('/api/health', (_req, res) => {
   res.json({
