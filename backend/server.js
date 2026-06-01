@@ -534,7 +534,12 @@ app.get('/api/oferta-activa', async (req, res) => {
 // ===================== /api/datos/:tabla =====================
 app.get('/api/datos/:tabla', async (req, res) => {
   const rawTabla = req.params.tabla;
-  const cacheKey = `datos_${normalize(rawTabla)}_${JSON.stringify(req.query)}`;
+  
+  const cleanQuery = { ...req.query };
+  delete cleanQuery._ts;
+  
+  const cacheKey = `datos_${normalize(rawTabla)}_${JSON.stringify(cleanQuery)}`;
+
 
   // Cache-first
   const cachedEarly = await getCache(cacheKey);
