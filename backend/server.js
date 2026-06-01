@@ -20,11 +20,11 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-const CACHE_TTL_SECONDS = 60 * 60; // 1 hora (Redis usa segundos)
+const CACHE_TTL_SECONDS = 0; // 0 = sin expiración en Redis
 
 // Cache en memoria como capa rápida (evita llamadas HTTP a Redis en cada request)
 const memCache = new Map();
-const MEM_TTL  = 1000 * 60 * 60; // 1 hora en ms
+const MEM_TTL = 1000 * 60 * 60 * 24 * 30;
 
 function getMemCache(key) {
   const item = memCache.get(key);
@@ -60,7 +60,11 @@ async function getCache(key) {
 async function setCache(key, data) {
   setMemCache(key, data);
   try {
-    await redis.set(key, data, { ex: CACHE_TTL_SECONDS });
+    if (CACHE_TTL_SECONDS > 0) {
+      await redis.set(key, data, { ex: CACHE_TTL_SECONDS });
+    } else {
+      await redis.set(key, data); // sin expiración
+    }
   } catch (err) {
     console.warn('⚠️ Redis set error:', err.message);
   }
@@ -242,9 +246,16 @@ app.get('/api/cache/warmup-status', (_req, res) => {
 });
 
 // Cache: lanzar warmup manual — ÚNICO punto que enciende Azure SQL
-app.post('/api/cache/warmup', async (_req, res) => {
-  // Responder de inmediato para no bloquear al cliente
-  res.json({ message: 'Warmup iniciado. Conectando a Azure SQL...', entries: memCache.size });
+// Agregar este middleware solo para warmup
+app.post('/api/cache/warmup', async (req, res) => {
+  
+  // Verificar clave de admin
+  const adminKey = req.headers['x-admin-key'];
+  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  res.json({ message: 'Warmup iniciado...', entries: memCache.size });
 
   try {
     await connectDB();
@@ -255,7 +266,6 @@ app.post('/api/cache/warmup', async (_req, res) => {
     console.error('❌ Error en warmup:', getErrorMessage(err));
   }
 });
-
 // Health
 app.get('/api/health', (_req, res) => {
   res.json({
