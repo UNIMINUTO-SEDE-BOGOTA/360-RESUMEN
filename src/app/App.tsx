@@ -19,25 +19,7 @@ import ComparativosView from "./components/ComparativosView";
 import { OfertaView } from "./components/OfertaView";
 import { InvestigacionView } from "./components/InvestigacionView";
 
-// Estado de autenticación admin
-const [isAdmin, setIsAdmin] = useState(false);
-const [showLoginModal, setShowLoginModal] = useState(false);
-const [adminInput, setAdminInput] = useState('');
-const [loginError, setLoginError] = useState('');
 
-const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY; // en .env del frontend
-
-// Login admin
-const handleAdminLogin = () => {
-  if (adminInput === ADMIN_KEY) {
-    setIsAdmin(true);
-    setShowLoginModal(false);
-    setLoginError('');
-    setAdminInput('');
-  } else {
-    setLoginError('Clave incorrecta');
-  }
-};
 const API_URL =
   (typeof import.meta !== "undefined" &&
     (import.meta as any).env &&
@@ -137,6 +119,26 @@ const getFacSigla = (fac?: string): string | null => {
 // ==================== APP ====================
 
 function App() {
+
+    // Estado de autenticación admin
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [adminInput, setAdminInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+  
+  const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY; // en .env del frontend
+  
+  // Login admin
+  const handleAdminLogin = () => {
+    if (adminInput === ADMIN_KEY) {
+      setIsAdmin(true);
+      setShowLoginModal(false);
+      setLoginError('');
+      setAdminInput('');
+    } else {
+      setLoginError('Clave incorrecta');
+    }
+  };
 
   const [base, setBase] = useState<BaseOptions>({
     years: [],
@@ -659,7 +661,7 @@ const forceRefresh = async () => {
  
   try {
     // 1. Lanza warmup en backend (conecta Azure y recarga Redis)
-    await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST', HEADERS: {
+    await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST', headers: {
        'x-admin-key': ADMIN_KEY  // solo admin tiene esta clave
     }
     });
