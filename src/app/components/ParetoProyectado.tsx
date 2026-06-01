@@ -143,17 +143,17 @@ export function ParetoProyectado({
       </div>
 
       {/* CONTENIDO */}
-      <div className="flex flex-col lg:flex-row gap-3 w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
         {/* COLUMNA IZQUIERDA */}
-        <div className="flex flex-col gap-3 w-full lg:w-80 lg:flex-shrink-0">
+        <div className="flex flex-col gap-3
 
           {/* TABLA 80% */}
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-            <div className="bg-slate-600 text-white text-xs px-3 py-2 font-medium">
+            <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
               Programas que contienen el 80% de los estudiantes nuevos
             </div>
-            <div className="overflow-y-auto max-h-52">
+            <div className="overflow-y-auto max-h-56">
               <table className="w-full text-xs">
                 <thead className="bg-slate-50 sticky top-0">
                   <tr>
