@@ -434,18 +434,6 @@ app.get('/api/datos/:tabla', async (req, res) => {
       });
     }
 
-    // 3. Deduplicar (clave ampliada para evitar colisiones)
-    if (data.length > 0) {
-      data = Array.from(
-        new Map(
-          data.map(item => [
-            `${item.programa}-${item.centro}-${item.periodo}-${item.ano}`,
-            item,
-          ])
-        ).values()
-      );
-    }
-
     return res.json({ rows: data, total: data.length, fromCache: true });
   } catch (err) {
     console.error('❌ Error leyendo cache:', err);
