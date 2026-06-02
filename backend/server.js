@@ -199,9 +199,8 @@ async function warmupCacheDirect() {
     console.log('📊 Años encontrados:', years);
 
     // ── 2. Población por año (en paralelo) ──────────────────────────────────
-    await Promise.all(years.map(async (year) => {
-      try {
-        await Promise.all(years.map(async (year) => {
+    // ── 2. Población por año (en paralelo) ──────────────────────────────────
+await Promise.all(years.map(async (year) => {
   try {
     const result = await pool.request()
       .input('year', sql.Int, Number(year))
@@ -229,6 +228,7 @@ async function warmupCacheDirect() {
                 'á','a'),'é','e'),'í','i'),'ó','o')
               ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
       `);
+
     await setCache(`poblacion:${year}`, result.recordset);
     console.log(`✅ poblacion:${year} → ${result.recordset.length} filas`);
   } catch (err) {
