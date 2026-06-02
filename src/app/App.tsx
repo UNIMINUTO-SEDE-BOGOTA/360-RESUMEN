@@ -251,6 +251,8 @@ function App() {
 useEffect(() => {
   (async () => {
     const all = await fetchAzureData(); // devuelve [] si no hay cache, sin errores
+    console.log("🔍 fetchAzureData resultado:", all?.length, all?.[0]);
+
  
     // Si no hay datos aún (Redis vacío), no hacer nada —
     // el usuario debe pulsar "Actualizar"
