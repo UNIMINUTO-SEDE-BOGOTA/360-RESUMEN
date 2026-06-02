@@ -76,25 +76,6 @@ const clean = (t: string) => (t || "").trim().toLowerCase();
 
 // ==================== HELPERS ====================
 
-// Convierte "2025-2026-1" → "2025 · S1", "2025-2026-Q2" → "2025 · Q2", etc.
-export const getPeriodoLabel = (combinado: string): string => {
-  const idx = combinado.indexOf("-");
-  if (idx === -1) return combinado;
-  const year = combinado.slice(0, idx);
-  const resto = combinado.slice(idx + 1).toLowerCase();
-
-  let sufijo = "";
-  if (resto.includes("q1")) sufijo = "Q1";
-  else if (resto.includes("q2")) sufijo = "Q2";
-  else if (resto.includes("q3")) sufijo = "Q3";
-  else if (resto.includes("q4")) sufijo = "Q4";
-  else if (resto.endsWith("2") || resto.includes("s2") || resto.includes("-2")) sufijo = "S2";
-  else if (resto.endsWith("1") || resto.includes("s1") || resto.includes("-1")) sufijo = "S1";
-  else sufijo = resto.toUpperCase();
-
-  return `${year} · ${sufijo}`;
-};
-
 const normalizeNivel = (nivel: string): string => {
   const n = (nivel || "").toString().toLowerCase().trim();
   if (
@@ -139,14 +120,14 @@ const getFacSigla = (fac?: string): string | null => {
 
 function App() {
 
-  // Estado de autenticación admin
+    // Estado de autenticación admin
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [adminInput, setAdminInput] = useState('');
   const [loginError, setLoginError] = useState('');
-
-  const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY;
-
+  
+  const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY; // en .env del frontend
+  
   // Login admin
   const handleAdminLogin = () => {
     if (adminInput === ADMIN_KEY) {
@@ -177,7 +158,6 @@ function App() {
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
   const [subViewPareto, setSubViewPareto] = useState<"ejecutado" | "proyectado">("ejecutado");
 
-  // ── Filtros DASHBOARD ──
   const [selYears, setSelYears] = useState<string[]>([]);
   const [selModalidades, setSelModalidades] = useState<string[]>([]);
   const [selNiveles, setSelNiveles] = useState<string[]>([]);
@@ -189,19 +169,6 @@ function App() {
   const [selNivelesFormacion, setSelNivelesFormacion] = useState<string[]>([]);
   const [selSedes, setSelSedes] = useState<string[]>([]);
   const [selFacultades, setSelFacultades] = useState<string[]>([]);
-
-  // ── Filtros PARETO (independientes del dashboard) ──
-  const [paretoSelYears, setParetoSelYears] = useState<string[]>([]);
-  const [paretoSelModalidades, setParetoSelModalidades] = useState<string[]>([]);
-  const [paretoSelNiveles, setParetoSelNiveles] = useState<string[]>([]);
-  const [paretoSelPeriodos, setParetoSelPeriodos] = useState<string[]>([]);
-  const [paretoSelCentros, setParetoSelCentros] = useState<string[]>([]);
-  const [paretoSelNivelFormacion, setParetoSelNivelFormacion] = useState<string[]>([]);
-  const [paretoSelProgramas, setParetoSelProgramas] = useState<string[]>([]);
-  const [paretoSelPeriodicidades, setParetoSelPeriodicidades] = useState<string[]>([]);
-  const [paretoSelNivelesFormacion, setParetoSelNivelesFormacion] = useState<string[]>([]);
-  const [paretoSelSedes, setParetoSelSedes] = useState<string[]>([]);
-  const [paretoSelFacultades, setParetoSelFacultades] = useState<string[]>([]);
 
   const [stats, setStats] = useState<StatsData | null>(null);
   const [modalidadBreakdown, setModalidadBreakdown] = useState<BreakdownItem[]>([]);
@@ -222,7 +189,7 @@ function App() {
   const [err, setErr] = useState<string | null>(null);
   const reqId = useRef(0);
 
-  // ==================== PARSED YEARS / PERIODOS (dashboard) ====================
+  // ==================== PARSED YEARS / PERIODOS ====================
 
   const { parsedYears, parsedPeriodos } = useMemo(() => {
     const years: string[] = [];
@@ -279,82 +246,81 @@ function App() {
       if (prev.length > 0 && prev.every(y => base.years.includes(y))) return prev;
       return [base.years[0]];
     });
-    setParetoSelYears(prev => {
-      if (prev.length > 0 && prev.every(y => base.years.includes(y))) return prev;
-      return [base.years[0]];
-    });
   }, [base.years]);
 
-  useEffect(() => {
-    (async () => {
-      const all = await fetchAzureData();
-
-      if (!all || all.length === 0) return;
-
-      const periodicidades = [...new Set(
-        all.map(d => (d.periodicidad ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-      const nivelesFormacion = [...new Set(
-        all.map(d => (d.nivelFormacion ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-      const facultades = [...new Set(
-        all.map(d => (d.facultad ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-      const periodosCombinados = [...new Set(
-        all
-          .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : '')
-          .filter(Boolean)
-      )].sort((a, b) => b.localeCompare(a));
-
-      const sedes = [...new Set(
-        all.map(d => (d.rectoria ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-      const programas = [...new Set(
-        all.map(d => (d.programa ?? d.siglasPrograma ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-      setListaProgramas(programas.map(p => ({ label: p, value: p })));
-
-      const modalidades = [...new Set(
-        all.map(d => (d.categoria ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-      const niveles = [...new Set(
-        all.map(d => normalizeNivel(d.nivelAcademico))
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-      const centros = [...new Set(
-        all.map(d => (d.centro ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => {
-        const indexA = ORDEN_CENTROS.indexOf(a);
-        const indexB = ORDEN_CENTROS.indexOf(b);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return a.localeCompare(b, 'es', { sensitivity: 'base' });
-      });
-
-      setSelNiveles(prev =>
-        prev.map(normalizeNivel).filter(v => ['Pregrado', 'Posgrado'].includes(v))
-      );
-
-      setBase(prev => ({
-        ...prev,
-        modalidades,
-        niveles,
-        periodos: periodosCombinados,
-        centros,
-        periodicidades,
-        nivelesFormacion,
-        facultades,
-        sedes,
-      }));
-    })();
-  }, []);
+useEffect(() => {
+  (async () => {
+    const all = await fetchAzureData(); // devuelve [] si no hay cache, sin errores
+ 
+    // Si no hay datos aún (Redis vacío), no hacer nada —
+    // el usuario debe pulsar "Actualizar"
+    if (!all || all.length === 0) return;
+ 
+    const periodicidades = [...new Set(
+      all.map(d => (d.periodicidad ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const nivelesFormacion = [...new Set(
+      all.map(d => (d.nivelFormacion ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const facultades = [...new Set(
+      all.map(d => (d.facultad ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const periodosCombinados = [...new Set(
+      all
+        .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : '')
+        .filter(Boolean)
+    )].sort((a, b) => b.localeCompare(a));
+ 
+    const sedes = [...new Set(
+      all.map(d => (d.rectoria ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const programas = [...new Set(
+      all.map(d => (d.programa ?? d.siglasPrograma ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    setListaProgramas(programas.map(p => ({ label: p, value: p })));
+ 
+    const modalidades = [...new Set(
+      all.map(d => (d.categoria ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const niveles = [...new Set(
+      all.map(d => normalizeNivel(d.nivelAcademico))
+    )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+    const centros = [...new Set(
+      all.map(d => (d.centro ?? '').toString().trim()).filter(Boolean)
+    )].sort((a, b) => {
+      const indexA = ORDEN_CENTROS.indexOf(a);
+      const indexB = ORDEN_CENTROS.indexOf(b);
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      return a.localeCompare(b, 'es', { sensitivity: 'base' });
+    });
+ 
+    setSelNiveles(prev =>
+      prev.map(normalizeNivel).filter(v => ['Pregrado', 'Posgrado'].includes(v))
+    );
+ 
+    setBase(prev => ({
+      ...prev,
+      modalidades,
+      niveles,
+      periodos: periodosCombinados,
+      centros,
+      periodicidades,
+      nivelesFormacion,
+      facultades,
+      sedes,
+    }));
+  })();
+}, []);
+ 
 
   useEffect(() => {
     if (activeTab !== "estudiantes") {
@@ -364,52 +330,23 @@ function App() {
 
   // ==================== PARETO ====================
 
-  const clearPareto = () => {
-    setParetoSelYears([base.years[0] ?? "2026"]);
-    setParetoSelModalidades([]);
-    setParetoSelNiveles([]);
-    setParetoSelPeriodos([]);
-    setParetoSelCentros([]);
-    setParetoSelNivelFormacion([]);
-    setParetoSelProgramas([]);
-    setParetoSelPeriodicidades([]);
-    setParetoSelNivelesFormacion([]);
-    setParetoSelSedes([]);
-    setParetoSelFacultades([]);
-  };
-
   const dataChart = paretoData.map(p => ({
     ...p,
     fill: p.porcentaje <= 80 ? "#22c55e" : "#93c5fd"
   }));
 
   const loadPareto = async () => {
-    const parsedParetoYears: string[] = [];
-    const parsedParetoPerids: string[] = [];
-
-    paretoSelPeriodos.forEach(p => {
-      if (p.includes("-")) {
-        const idx = p.indexOf("-");
-        const year = p.slice(0, idx);
-        const periodo = p.slice(idx + 1);
-        if (/^\d{4}$/.test(year)) parsedParetoYears.push(year);
-        if (periodo) parsedParetoPerids.push(periodo);
-      } else {
-        parsedParetoPerids.push(p);
-      }
-    });
-
     const filters = {
-      years: parsedParetoYears.length ? parsedParetoYears : paretoSelYears,
-      modalidades: paretoSelModalidades,
-      niveles: paretoSelNiveles,
-      nivelesFormacion: paretoSelNivelFormacion.length ? paretoSelNivelFormacion : undefined,
-      periodos: parsedParetoPerids,
-      centros: paretoSelCentros,
-      programas: paretoSelProgramas,
-      periodicidades: paretoSelPeriodicidades,
-      sedes: paretoSelSedes,
-      facultades: paretoSelFacultades,
+      years: parsedYears.length ? parsedYears : selYears,
+      modalidades: selModalidades,
+      niveles: selNiveles,
+      nivelesFormacion: selNivelFormacion.length ? selNivelFormacion : undefined,
+      periodos: parsedPeriodos,
+      centros: selCentros,
+      programas: selProgramas,
+      periodicidades: selPeriodicidades,
+      sedes: selSedes,
+      facultades: selFacultades
     };
     const res = await fetchTableMulti(filters);
     buildPareto(res.rows);
@@ -718,131 +655,139 @@ function App() {
     }
   };
 
-  const forceRefresh = async () => {
-    setIsLoading(true);
-    setErr(null);
-
-    try {
-      await fetch(`${API_URL}/api/cache/warmup`, {
-        method: 'POST',
-        headers: { 'x-admin-key': ADMIN_KEY }
-      });
-
-      const maxWait  = 60_000;
-      const interval = 2_000;
-      const start    = Date.now();
-
-      await new Promise<void>((resolve) => {
-        const check = async () => {
-          try {
-            const r = await fetch(`${API_URL}/api/cache/warmup-status`);
-            const { done, entries } = await r.json();
-            if ((done && entries > 0) || Date.now() - start > maxWait) {
-              resolve();
-            } else {
-              setTimeout(check, interval);
-            }
-          } catch {
-            resolve();
-          }
-        };
-        setTimeout(check, interval);
-      });
-
-      const all = await fetchAzureData();
-      if (all && all.length > 0) {
-        const periodicidades = [...new Set(
-          all.map(d => (d.periodicidad ?? '').toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-        const nivelesFormacion = [...new Set(
-          all.map(d => (d.nivelFormacion ?? '').toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-        const facultades = [...new Set(
-          all.map(d => (d.facultad ?? '').toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-        const periodosCombinados = [...new Set(
-          all
-            .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : '')
-            .filter(Boolean)
-        )].sort((a, b) => b.localeCompare(a));
-
-        const sedes = [...new Set(
-          all.map(d => (d.rectoria ?? '').toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-        const programas = [...new Set(
-          all.map(d => (d.programa ?? d.siglasPrograma ?? '').toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-        setListaProgramas(programas.map(p => ({ label: p, value: p })));
-
-        const modalidades = [...new Set(
-          all.map(d => (d.categoria ?? '').toString().trim()).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-        const niveles = [...new Set(
-          all.map(d => normalizeNivel(d.nivelAcademico))
-        )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-        const centros = [...new Set(
-          all.map(d => (d.centro ?? '').toString().trim()).filter(Boolean)
-        )].sort((a, b) => {
-          const indexA = ORDEN_CENTROS.indexOf(a);
-          const indexB = ORDEN_CENTROS.indexOf(b);
-          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-          if (indexA !== -1) return -1;
-          if (indexB !== -1) return 1;
-          return a.localeCompare(b, 'es', { sensitivity: 'base' });
-        });
-
-        setBase(prev => ({
-          ...prev,
-          modalidades,
-          niveles,
-          periodos: periodosCombinados,
-          centros,
-          periodicidades,
-          nivelesFormacion,
-          facultades,
-          sedes,
-        }));
-      }
-
-      await loadDashboard();
-
-    } catch (e: any) {
-      setErr(e.message || 'Error al actualizar');
-      setIsLoading(false);
+const forceRefresh = async () => {
+  setIsLoading(true);
+  setErr(null);
+ 
+  try {
+    // 1. Lanza warmup en backend (conecta Azure y recarga Redis)
+    await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST', headers: {
+       'x-admin-key': ADMIN_KEY  // solo admin tiene esta clave
     }
-  };
-
-  // ── Disparar carga Dashboard — solo cuando NO es pareto ──
-  useEffect(() => {
-    if (selYears.length === 0) return;
-    if (base.modalidades.length === 0 && base.centros.length === 0) return;
-    if (subViewEstudiantes === "pareto") return;
-    loadDashboard();
-  }, [
-    selYears, selModalidades, selNiveles, selPeriodos, selCentros,
-    base.periodicidades.length,
-  ]);
-
-  // ── Disparar carga Pareto — usa sus propios filtros ──
-  useEffect(() => {
-    if (paretoSelYears.length === 0) return;
-    if (base.modalidades.length === 0 && base.centros.length === 0) return;
-    if (subViewEstudiantes !== "pareto") return;
+    });
+ 
+    // 2. Polling hasta que el warmup termine (máx 60s)
+    const maxWait  = 60_000;
+    const interval = 2_000;
+    const start    = Date.now();
+ 
+    await new Promise<void>((resolve) => {
+      const check = async () => {
+        try {
+          const r = await fetch(`${API_URL}/api/cache/warmup-status`);
+          const { done, entries } = await r.json();
+          if ((done && entries > 0) || Date.now() - start > maxWait) {
+            resolve();
+          } else {
+            setTimeout(check, interval);
+          }
+        } catch {
+          resolve();
+        }
+      };
+      setTimeout(check, interval);
+    });
+ 
+    // 3. Recargar combos con los datos frescos de Redis
+    const all = await fetchAzureData();
+    if (all && all.length > 0) {
+      const periodicidades = [...new Set(
+        all.map(d => (d.periodicidad ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const nivelesFormacion = [...new Set(
+        all.map(d => (d.nivelFormacion ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const facultades = [...new Set(
+        all.map(d => (d.facultad ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const periodosCombinados = [...new Set(
+        all
+          .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : '')
+          .filter(Boolean)
+      )].sort((a, b) => b.localeCompare(a));
+ 
+      const sedes = [...new Set(
+        all.map(d => (d.rectoria ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const programas = [...new Set(
+        all.map(d => (d.programa ?? d.siglasPrograma ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      setListaProgramas(programas.map(p => ({ label: p, value: p })));
+ 
+      const modalidades = [...new Set(
+        all.map(d => (d.categoria ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const niveles = [...new Set(
+        all.map(d => normalizeNivel(d.nivelAcademico))
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+ 
+      const centros = [...new Set(
+        all.map(d => (d.centro ?? '').toString().trim()).filter(Boolean)
+      )].sort((a, b) => {
+        const indexA = ORDEN_CENTROS.indexOf(a);
+        const indexB = ORDEN_CENTROS.indexOf(b);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b, 'es', { sensitivity: 'base' });
+      });
+ 
+      setBase(prev => ({
+        ...prev,
+        modalidades,
+        niveles,
+        periodos: periodosCombinados,
+        centros,
+        periodicidades,
+        nivelesFormacion,
+        facultades,
+        sedes,
+      }));
+    }
+ 
+    // 4. Recargar dashboard
+    await loadDashboard();
+ 
+  } catch (e: any) {
+    setErr(e.message || 'Error al actualizar');
+    setIsLoading(false);
+  }
+};
+  // ── Disparar carga — GUARD: no corre hasta que haya año seleccionado ──
+ // ── Disparar carga — solo si hay combos cargados (Redis tiene datos) ──
+useEffect(() => {
+  if (selYears.length === 0) return;
+  // Si los combos están vacíos, significa que Redis no tiene datos todavía.
+  // No intentar cargar → esperar a que el usuario pulse "Actualizar"
+  if (base.modalidades.length === 0 && base.centros.length === 0) {
+    setIsLoading(false);
+    return;
+  }
+  if (subViewEstudiantes === "pareto") {
     loadPareto();
-  }, [
-    subViewEstudiantes,
-    paretoSelYears, paretoSelModalidades, paretoSelNiveles, paretoSelPeriodos,
-    paretoSelCentros, paretoSelPeriodicidades, paretoSelNivelFormacion,
-    paretoSelProgramas, paretoSelSedes, paretoSelFacultades,
-    base.periodicidades.length,
-  ]);
+  } else {
+    loadDashboard();
+  }
+}, [
+  subViewEstudiantes,
+  selYears,
+  selModalidades,
+  selNiveles,
+  selPeriodos,
+  selCentros,
+  selPeriodicidades,
+  selNivelFormacion,
+  selProgramas,
+  selSedes,
+  selFacultades,
+  base.periodicidades.length,
+]);
 
   // ==================== ACCIONES ====================
 
@@ -868,7 +813,7 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* HEADER */}
+      {/* HEADER — sticky solo él */}
       <header className="sticky top-0 z-50 bg-white border-b px-3 py-2 flex flex-wrap items-center justify-between gap-2">
 
         {/* LOGO */}
@@ -886,68 +831,70 @@ function App() {
 
         {/* ACCIONES */}
         <div className="flex gap-2">
+          
+{/* Botón Actualizar — solo admin */}
+{isAdmin ? (
+  <button
+    onClick={forceRefresh}
+    className="bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 text-xs font-medium hover:bg-blue-700"
+  >
+    <RefreshCw size={15} />
+    Actualizar
+  </button>
+) : (
+  <button
+    onClick={() => setShowLoginModal(true)}
+    className="bg-gray-200 text-gray-500 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-300"
+  >
+    🔒 Admin
+  </button>
+)}
+           {/* ✅ BOTÓN 360 — agregar aquí */}
+  <button
+    onClick={() => window.open(
+      "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
+      "_blank"
+    )}
+    className="bg-slate-800 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1.5 hover:bg-slate-700"
+  >
+    <Gauge size={15} /> 360
+  </button>
 
-          {isAdmin ? (
-            <button
-              onClick={forceRefresh}
-              className="bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 text-xs font-medium hover:bg-blue-700"
-            >
-              <RefreshCw size={15} />
-              Actualizar
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowLoginModal(true)}
-              className="bg-gray-200 text-gray-500 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-300"
-            >
-              🔒 Admin
-            </button>
-          )}
 
-          <button
-            onClick={() => window.open(
-              "https://uniminuto0.sharepoint.com/:u:/r/sites/G-360/SitePages/TrainingHome.aspx?csf=1&web=1&e=xgeBy9",
-              "_blank"
-            )}
-            className="bg-slate-800 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1.5 hover:bg-slate-700"
-          >
-            <Gauge size={15} /> 360
-          </button>
-
-          {/* Modal login admin */}
-          {showLoginModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-xl p-6 w-80 flex flex-col gap-4 shadow-xl">
-                <h2 className="font-bold text-gray-800">Acceso Administrador</h2>
-                <input
-                  type="password"
-                  placeholder="Clave de administrador"
-                  value={adminInput}
-                  onChange={e => setAdminInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
-                  className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {loginError && <p className="text-red-500 text-xs">{loginError}</p>}
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => { setShowLoginModal(false); setAdminInput(''); setLoginError(''); }}
-                    className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleAdminLogin}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    Entrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+{/* Modal login admin */}
+{showLoginModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-80 flex flex-col gap-4 shadow-xl">
+      <h2 className="font-bold text-gray-800">Acceso Administrador</h2>
+      <input
+        type="password"
+        placeholder="Clave de administrador"
+        value={adminInput}
+        onChange={e => setAdminInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+        className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      {loginError && <p className="text-red-500 text-xs">{loginError}</p>}
+      <div className="flex gap-2 justify-end">
+        <button
+          onClick={() => { setShowLoginModal(false); setAdminInput(''); setLoginError(''); }}
+          className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleAdminLogin}
+          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Entrar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         </div>
 
-        {/* TABS */}
+        {/* TABS — scroll horizontal en móvil, sin wrap */}
         <div className="w-full overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
           <div className="flex gap-1.5 sm:justify-center" style={{ width: "max-content", minWidth: "100%" }}>
             {["estudiantes", "colaboradores", "comparativos", "oferta", "investigacion"].map(tab => (
@@ -1043,7 +990,7 @@ function App() {
                           years={base.years.map(y => ({ label: y, value: y }))}
                           modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
                           niveles={base.niveles.map(n => ({ label: n, value: n }))}
-                          periodos={base.periodos.map(p => ({ label: getPeriodoLabel(p), value: p }))}
+                          periodos={base.periodos.map(p => ({ label: p, value: p }))}
                           centros={base.centros.map(c => ({ label: c, value: c }))}
                           selYears={selYears} setSelYears={setSelYears}
                           selModalidades={selModalidades} setSelModalidades={setSelModalidades}
@@ -1068,18 +1015,18 @@ function App() {
                           pareto80={pareto80}
                           pareto20={pareto20}
                           dataChart={dataChart}
-                          selYears={paretoSelYears} setSelYears={setParetoSelYears}
-                          selModalidades={paretoSelModalidades} setSelModalidades={setParetoSelModalidades}
-                          selNivelFormacion={paretoSelNivelFormacion} setSelNivelFormacion={setParetoSelNivelFormacion}
-                          selPeriodos={paretoSelPeriodos} setSelPeriodos={setParetoSelPeriodos}
-                          selCentros={paretoSelCentros} setSelCentros={setParetoSelCentros}
-                          selProgramas={paretoSelProgramas} setSelProgramas={setParetoSelProgramas}
-                          selPeriodicidades={paretoSelPeriodicidades} setSelPeriodicidades={setParetoSelPeriodicidades}
-                          selNiveles={paretoSelNiveles} setSelNiveles={setParetoSelNiveles}
-                          selNivelesFormacion={paretoSelNivelesFormacion} setSelNivelesFormacion={setParetoSelNivelesFormacion}
-                          selSedes={paretoSelSedes} setSelSedes={setParetoSelSedes}
-                          selFacultades={paretoSelFacultades} setSelFacultades={setParetoSelFacultades}
-                          clearAll={clearPareto}
+                          selYears={selYears} setSelYears={setSelYears}
+                          selModalidades={selModalidades} setSelModalidades={setSelModalidades}
+                          selNivelFormacion={selNivelFormacion} setSelNivelFormacion={setSelNivelFormacion}
+                          selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
+                          selCentros={selCentros} setSelCentros={setSelCentros}
+                          selProgramas={selProgramas} setSelProgramas={setSelProgramas}
+                          selPeriodicidades={selPeriodicidades} setSelPeriodicidades={setSelPeriodicidades}
+                          selNiveles={selNiveles} setSelNiveles={setSelNiveles}
+                          selNivelesFormacion={selNivelesFormacion} setSelNivelesFormacion={setSelNivelesFormacion}
+                          selSedes={selSedes} setSelSedes={setSelSedes}
+                          selFacultades={selFacultades} setSelFacultades={setSelFacultades}
+                          clearAll={clearAll}
                           onVolver={() => setSubViewEstudiantes("dashboard")}
                           onIrEjecutado={() => setSubViewPareto("ejecutado")}
                         />
@@ -1110,18 +1057,18 @@ function App() {
                               selNiveles={[]}
                               setSelNiveles={() => {}}
                               nivelesFormacion={base.nivelesFormacion.map(n => ({ label: n, value: n }))}
-                              selNivelesFormacion={paretoSelNivelFormacion}
-                              setSelNivelesFormacion={setParetoSelNivelFormacion}
-                              periodos={base.periodos.map(p => ({ label: getPeriodoLabel(p), value: p }))}
+                              selNivelesFormacion={selNivelFormacion}
+                              setSelNivelesFormacion={setSelNivelFormacion}
+                              periodos={base.periodos.map(p => ({ label: p, value: p }))}
                               centros={base.centros.map(c => ({ label: c, value: c }))}
                               programas={listaProgramas}
-                              selProgramas={paretoSelProgramas}
-                              setSelProgramas={setParetoSelProgramas}
-                              selYears={paretoSelYears} setSelYears={setParetoSelYears}
-                              selModalidades={paretoSelModalidades} setSelModalidades={setParetoSelModalidades}
-                              selPeriodos={paretoSelPeriodos} setSelPeriodos={setParetoSelPeriodos}
-                              selCentros={paretoSelCentros} setSelCentros={setParetoSelCentros}
-                              clearAll={clearPareto}
+                              selProgramas={selProgramas}
+                              setSelProgramas={setSelProgramas}
+                              selYears={selYears} setSelYears={setSelYears}
+                              selModalidades={selModalidades} setSelModalidades={setSelModalidades}
+                              selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
+                              selCentros={selCentros} setSelCentros={setSelCentros}
+                              clearAll={clearAll}
                             />
                           </div>
 
