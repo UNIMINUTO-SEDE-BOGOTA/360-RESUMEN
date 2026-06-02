@@ -324,18 +324,27 @@ return (
                   <th className="px-2 py-1 text-center">Completo</th>
                   <th className="px-2 py-1 text-center">Medio</th>
                   <th className="px-2 py-1 text-center">Parcial</th>
+                  <th className="px-2 py-1 text-center font-bold">Total</th>
                 </tr>
+                
               </thead>
-              <tbody>
-                {nivelTotals.map((r: any, i) => (
-                  <tr key={i} className="border-t">
-                    <td className="px-2 py-1">{r.nivel}</td>
-                    <td className="px-2 py-1 text-center">{r["1.Tiempo Completo"] || ""}</td>
-                    <td className="px-2 py-1 text-center">{r["2.Medio Tiempo"] || ""}</td>
-                    <td className="px-2 py-1 text-center">{r["3.Tiempo Parcial"] || ""}</td>
-                  </tr>
-                ))}
-              </tbody>
+                <tbody>
+                  {nivelTotals.map((r: any, i) => {
+                    const rowTotal =
+                      (r["1.Tiempo Completo"] || 0) +
+                      (r["2.Medio Tiempo"] || 0) +
+                      (r["3.Tiempo Parcial"] || 0);
+                    return (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1">{r.nivel}</td>
+                        <td className="px-2 py-1 text-center">{r["1.Tiempo Completo"] || ""}</td>
+                        <td className="px-2 py-1 text-center">{r["2.Medio Tiempo"] || ""}</td>
+                        <td className="px-2 py-1 text-center">{r["3.Tiempo Parcial"] || ""}</td>
+                        <td className="px-2 py-1 text-center font-bold">{rowTotal || ""}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
             </table>
           </div>
         </div>
