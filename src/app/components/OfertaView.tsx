@@ -114,6 +114,8 @@ export function OfertaView({ fechaCorte = "20 de febrero de 2026" }: Props) {
     fetch(`${API_URL}/api/oferta-activa`)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((rows: Programa[]) => {
+          console.log("🔍 oferta raw:", rows?.length, rows?.[0]);
+
         const normalizados = rows.map(r => ({ 
           ...r, 
           nivelFormacion: normalizarNivel(r.nivelFormacion) 
