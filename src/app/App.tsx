@@ -765,33 +765,45 @@ const forceRefresh = async () => {
 };
   // ── Disparar carga — GUARD: no corre hasta que haya año seleccionado ──
  // ── Disparar carga — solo si hay combos cargados (Redis tiene datos) ──
-useEffect(() => {
-  if (selYears.length === 0) return;
-  if (base.modalidades.length === 0 && base.centros.length === 0) {
-    setIsLoading(false);
-    return;
-  }
-  if (subViewEstudiantes === "pareto") {
-    loadPareto();
-  } else {
-    loadDashboard();
-  }
-}, [
-  subViewEstudiantes,
-  selYears,
-  selModalidades,
-  selNiveles,
-  selPeriodos,
-  selCentros,
-  selPeriodicidades,
-  selNivelFormacion,
-  selProgramas,
-  selSedes,
-  selFacultades,
-  base.periodicidades.length,
-  base.modalidades.length,   // ← AGREGAR
-  base.centros.length,       // ← AGREGAR
-]);
+  useEffect(() => {
+    console.log("🔍 useEffect disparado", {
+      selYears,
+      modalidades: base.modalidades.length,
+      centros: base.centros.length,
+    });
+  
+    if (selYears.length === 0) {
+      console.log("❌ bloqueado: sin años");
+      return;
+    }
+    if (base.modalidades.length === 0 && base.centros.length === 0) {
+      console.log("❌ bloqueado: combos vacíos");
+      setIsLoading(false);
+      return;
+    }
+  
+    console.log("✅ llamando loadDashboard");
+    if (subViewEstudiantes === "pareto") {
+      loadPareto();
+    } else {
+      loadDashboard();
+    }
+  }, [
+    subViewEstudiantes,
+    selYears,
+    selModalidades,
+    selNiveles,
+    selPeriodos,
+    selCentros,
+    selPeriodicidades,
+    selNivelFormacion,
+    selProgramas,
+    selSedes,
+    selFacultades,
+    base.periodicidades.length,
+    base.modalidades.length,
+    base.centros.length,
+  ]);
 
   // ==================== ACCIONES ====================
 
