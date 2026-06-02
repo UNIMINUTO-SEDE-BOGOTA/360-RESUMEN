@@ -151,9 +151,10 @@ export default function ColaboradoresView() {
     setLoading(true);
     fetch(`${API_URL}/api/colaboradores?periodo=2026-1`)
       .then(r => r.json())
-      .then(d => setRows(Array.isArray(d) ? d : []))
-          console.log("🔍 colaboradores raw:", d?.length, d?.[0]);
-
+      .then(d => {
+        console.log("🔍 colaboradores raw:", d?.length, d?.[0]);
+        setRows(Array.isArray(d) ? d : []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
