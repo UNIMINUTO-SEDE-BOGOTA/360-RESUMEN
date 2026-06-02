@@ -365,8 +365,8 @@ return (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dedicacionData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis />
+                <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+                <YAxis tick={{ fontSize: 8 }} />
                 <Tooltip />
                 <Legend />
                 {["1.Presencial","2.Distancia","Sin información"].map(k => (
@@ -392,8 +392,8 @@ return (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={escalafonData} margin={{ top: 35, right: 10, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="name" angle={-30} textAnchor="end" height={60} interval={0} />
-                <YAxis />
+                <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+                <YAxis tick={{ fontSize: 8 }} />
                 <Tooltip />
                 <Bar dataKey="valor">
                   {escalafonData.map((_, i) => (
