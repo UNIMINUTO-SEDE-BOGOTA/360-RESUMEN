@@ -304,7 +304,7 @@ return (
     </div>
 
     {/* KPI */}
-    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center">
+    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center sticky top-0 z-10">
       <div className="text-[10px] text-blue-500 font-semibold uppercase">
         Colaboradores Totales
       </div>
