@@ -22,6 +22,7 @@ interface ColaboradorRow {
   dedicacion?: string;
   escalafon?: string;
   tipoContrato?: string;
+  duracionContrato?: string;
   total?: number;
 }
 
@@ -226,8 +227,14 @@ export default function ColaboradoresView() {
   const contratoData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredRows.forEach(r => {
-      const c = r.tipoContrato || "Sin información";
-      map[c] = (map[c] || 0) + (r.total || 0);
+      const tipo = r.tipoContrato || "Sin información";
+      const duracion = r.duracionContrato || "";
+  
+      const key = duracion === "1 Año o Más" || tipo.toLowerCase().includes("indefinido")
+        ? "Indefinido"
+        : tipo;
+  
+      map[key] = (map[key] || 0) + (r.total || 0);
     });
     return Object.entries(map).map(([name, value]) => ({
       name,
