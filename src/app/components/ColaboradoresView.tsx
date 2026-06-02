@@ -259,17 +259,7 @@ return (
       <div className="text-xs text-slate-300">2026-1</div>
     </div>
 
-    {/* KPI */}
-    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center">
-      <div className="text-[10px] text-blue-500 font-semibold uppercase">
-        Colaboradores Totales
-      </div>
-      <div className="text-3xl font-bold text-blue-700">
-        {loading ? "…" : totalColaboradores.toLocaleString("es-CO")}
-      </div>
-    </div>
-
-    {/* FILTROS */}
+        {/* FILTROS */}
     <div className="bg-white border-b px-2 py-1">
       <div className="flex flex-wrap gap-2 items-end [&>*]:flex-1 [&>*]:min-w-[130px]">
         <DropdownMulti
@@ -310,6 +300,16 @@ return (
             🗑 Limpiar
           </span>
         </button>
+      </div>
+    </div>
+
+    {/* KPI */}
+    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center">
+      <div className="text-[10px] text-blue-500 font-semibold uppercase">
+        Colaboradores Totales
+      </div>
+      <div className="text-3xl font-bold text-blue-700">
+        {loading ? "…" : totalColaboradores.toLocaleString("es-CO")}
       </div>
     </div>
 
@@ -371,7 +371,12 @@ return (
                 <Legend />
                 {["1.Presencial","2.Distancia","Sin información"].map(k => (
                   <Bar key={k} dataKey={k} stackId="a" fill={DEDICACION_COLORS[k]}>
-                    <LabelList dataKey={k} position="center" />
+                    <LabelList
+                      dataKey={k}
+                      position="insideTop"
+                      style={{ fontSize: 9, fill: "#1e293b", fontWeight: 600 }}
+                      formatter={(v: number) => v > 0 ? v : ""}
+                    />
                   </Bar>
                 ))}
               </BarChart>
@@ -414,7 +419,22 @@ return (
           <div className="p-2 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={contratoData} dataKey="value" outerRadius={75} label={({ pct }) => pct}>
+                <Pie
+                  data={contratoData}
+                  dataKey="value"
+                  outerRadius={70}
+                  label={({ pct, cx, cy, midAngle, outerRadius }) => {
+                    const RADIAN = Math.PI / 180;
+                    const radius = outerRadius + 20;
+                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                    return (
+                      <text x={x} y={y} fill="#334155" textAnchor="middle" dominantBaseline="central" fontSize={9}>
+                        {pct}
+                      </text>
+                    );
+                  }}
+                >
                   {contratoData.map((_, i) => (
                     <Cell key={i} fill={CONTRATO_COLORS[i % CONTRATO_COLORS.length]} />
                   ))}
