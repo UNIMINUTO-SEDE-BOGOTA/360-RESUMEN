@@ -83,6 +83,13 @@ const mapRow = (item: any, index: number): DataItem => ({
   graduados:       Number(item.graduados ?? item['Graduados'] ?? 0),
 });
 
+const normalizeNivel = (nivel: string): string => {
+  const n = (nivel ?? '').toLowerCase().trim();
+  if (n.includes('posgrado') || n.includes('especial') ||
+      n.includes('maestr') || n.includes('doctor')) return 'Posgrado';
+  return 'Pregrado';
+};
+
 // ==================== FETCH SEGURO ====================
 // NUNCA lanza error ni reintenta — si no hay cache simplemente
 // devuelve vacío. Azure SQL solo se enciende desde el botón Actualizar.
@@ -122,28 +129,8 @@ export async function fetchTableMulti(
 ): Promise<{ total: number; rows: DataItem[] }> {
   const qs = new URLSearchParams();
 
-  const yearsCsv      = toCsv(f.years);
-  const modsCsv       = toCsv(f.modalidades);
-  const nivCsv        = toCsv(f.niveles);
-  const perCsv        = toCsvUpper(f.periodos);
-  const cenCsv        = toCsv(f.centros);
-  const progCsv       = toCsv(f.programas);
-  const nivFormCsv    = toCsv(f.nivelesFormacion);
-  const periodCsv     = toCsv(f.periodicidades);
-  const facultadesCsv = toCsv(f.facultades);
-  const sedesCsv      = toCsv(f.sedes);
-
-  if (yearsCsv)      qs.set('years',           yearsCsv);
-  if (modsCsv)       qs.set('modalidades',     modsCsv);
-  if (nivCsv)        qs.set('niveles',         nivCsv);
-  if (perCsv)        qs.set('periodos',        perCsv);
-  if (cenCsv)        qs.set('centros',         cenCsv);
-  if (progCsv)       qs.set('programas',       progCsv);
-  if (nivFormCsv)    qs.set('nivelesFormacion', nivFormCsv);
-  if (periodCsv)     qs.set('periodicidades',  periodCsv);
-  if (facultadesCsv) qs.set('facultades',      facultadesCsv);
-  if (sedesCsv)      qs.set('sedes',           sedesCsv);
-
+  const yearsCsv = toCsv(f.years);
+  if (yearsCsv) qs.set('years', yearsCsv);
   qs.set('page',     String(f.page     ?? 1));
   qs.set('pageSize', String(f.pageSize ?? 20000));
   qs.set('_ts',      String(Date.now()));
@@ -152,5 +139,38 @@ export async function fetchTableMulti(
   const raw = await safeFetch(url);
   if (!raw) return { total: 0, rows: [] };
 
-  return { total: raw.length, rows: raw.map(mapRow) };
+  let rows = raw.map(mapRow);
+
+  // ── Filtros en frontend ──────────────────────────────────────────
+  const norm = (s: string) =>
+    (s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+  if (f.modalidades?.length)
+    rows = rows.filter(r => f.modalidades!.some(m => norm(r.categoria) === norm(m)));
+
+  if (f.niveles?.length)
+    rows = rows.filter(r => f.niveles!.includes(normalizeNivel(r.nivelAcademico)));
+
+  if (f.periodos?.length)
+    rows = rows.filter(r => f.periodos!.some(p => norm(r.periodo) === norm(p)));
+
+  if (f.centros?.length)
+    rows = rows.filter(r => f.centros!.some(c => norm(r.centro ?? '') === norm(c)));
+
+  if (f.nivelesFormacion?.length)
+    rows = rows.filter(r => f.nivelesFormacion!.some(n => norm(r.nivelFormacion ?? '') === norm(n)));
+
+  if (f.periodicidades?.length)
+    rows = rows.filter(r => f.periodicidades!.some(p => norm(r.periodicidad ?? '') === norm(p)));
+
+  if (f.facultades?.length)
+    rows = rows.filter(r => f.facultades!.some(fc => norm(r.facultad ?? '') === norm(fc)));
+
+  if (f.sedes?.length)
+    rows = rows.filter(r => f.sedes!.some(s => norm(r.rectoria ?? '') === norm(s)));
+
+  if (f.programas?.length)
+    rows = rows.filter(r => f.programas!.some(p => norm(r.programa ?? '') === norm(p)));
+
+  return { total: rows.length, rows };
 }
