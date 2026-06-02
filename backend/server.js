@@ -201,33 +201,40 @@ async function warmupCacheDirect() {
     // ── 2. Población por año (en paralelo) ──────────────────────────────────
     await Promise.all(years.map(async (year) => {
       try {
-        const result = await pool.request()
-          .input('year', sql.Int, Number(year))
-          .query(`
-            SELECT
-              [Año]                    AS ano,
-              [Modalidad]              AS categoria,
-              [Nivel Académico]        AS nivelAcademico,
-              [Nivel de Formación]     AS nivelFormacion,
-              [Facultad]               AS facultad,
-              [Centro Universitario]   AS centro,
-              [Centro de Operación]    AS centroOperacion,
-              [Programa Académico]     AS programa,
-              [Estudiantes Nuevos]     AS nuevos,
-              [Estudiantes Continuos]  AS continuos,
-              [Estudiantes Totales]    AS totales,
-              [Periodo]                AS periodo,
-              [Periodicidad]           AS periodicidad,
-              [Rectoría]               AS rectoria
-            FROM Poblacion_Estudiantil
-            WHERE [Año] = @year
-          `);
-        await setCache(`poblacion:${year}`, result.recordset);
-        console.log(`✅ poblacion:${year} → ${result.recordset.length} filas`);
-      } catch (err) {
-        console.error(`❌ Error cargando año ${year}:`, err.message);
-      }
-    }));
+        await Promise.all(years.map(async (year) => {
+  try {
+    const result = await pool.request()
+      .input('year', sql.Int, Number(year))
+      .query(`
+        SELECT
+          [Año]                    AS ano,
+          [Modalidad]              AS categoria,
+          [Nivel Académico]        AS nivelAcademico,
+          [Nivel de Formación]     AS nivelFormacion,
+          [Facultad]               AS facultad,
+          [Centro Universitario]   AS centro,
+          [Centro de Operación]    AS centroOperacion,
+          [Programa Académico]     AS programa,
+          [Estudiantes Nuevos]     AS nuevos,
+          [Estudiantes Continuos]  AS continuos,
+          [Estudiantes Totales]    AS totales,
+          [Periodo]                AS periodo,
+          [Periodicidad]           AS periodicidad,
+          [Rectoría]               AS rectoria
+        FROM Poblacion_Estudiantil
+        WHERE [Año] = @year
+          AND LOWER(LTRIM(RTRIM(
+                REPLACE(REPLACE(REPLACE(REPLACE(
+                  CONVERT(NVARCHAR(200), [Rectoría] COLLATE Latin1_General_CI_AI),
+                'á','a'),'é','e'),'í','i'),'ó','o')
+              ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
+      `);
+    await setCache(`poblacion:${year}`, result.recordset);
+    console.log(`✅ poblacion:${year} → ${result.recordset.length} filas`);
+  } catch (err) {
+    console.error(`❌ Error cargando año ${year}:`, err.message);
+  }
+}));
 
     // ── 3. Colaboradores ────────────────────────────────────────────────────
     try {
