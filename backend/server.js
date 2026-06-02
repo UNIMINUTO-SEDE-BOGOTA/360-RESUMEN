@@ -237,15 +237,67 @@ await Promise.all(years.map(async (year) => {
 }));
 
     // ── 3. Colaboradores ────────────────────────────────────────────────────
-    try {
-      const r = await pool.request().query(`SELECT * FROM Colaboradores`);
+try {
+      const r = await pool.request().query(`
+        SELECT
+          [Modalidad]                          AS modalidad,
+          [Género]                             AS genero,
+          [Tipo de trabajador]                 AS tipo,
+          [Máximo nivel de formación obtenido] AS nivelFormacion,
+          [Dedicación]                         AS dedicacion,
+          [Categoría en el escalafón docente]  AS escalafon,
+          [Tipo de contrato]                   AS tipoContrato,
+          [Duración del contrato]              AS duracionContrato,
+          [Numero de trabajadores]             AS total,
+          [Periodo]                            AS periodo,
+          [Rectoría]                           AS rectoria
+        FROM Colaboradores
+        WHERE LOWER(LTRIM(RTRIM(
+          REPLACE(REPLACE(REPLACE(REPLACE(
+            CONVERT(NVARCHAR(200), [Rectoría] COLLATE Latin1_General_CI_AI),
+          'á','a'),'é','e'),'í','i'),'ó','o')
+        ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
+      `);
       await setCache('colaboradores:all', r.recordset);
       console.log(`✅ colaboradores:all → ${r.recordset.length}`);
     } catch (e) { console.warn('⚠️ Error colaboradores:', e.message); }
 
+
     // ── 4. Oferta activa ────────────────────────────────────────────────────
     try {
-      const r = await pool.request().query(`SELECT * FROM Oferta_Activa`);
+      const r = await pool.request().query(`
+        SELECT
+          [FACULTAD]                           AS facultad,
+          [DENOMINACIÓN DEL PROGRAMA]          AS denominacion,
+          [NIVEL DE FORMACIÓN]                 AS nivelFormacion,
+          [MODALIDAD]                          AS modalidad,
+          [PERIODICIDAD DE ADMISIÓN]           AS periodicidad,
+          [DURACIÓN DEL PROGRAMA]              AS duracion,
+          [CRÉDITOS DEL PROGRAMA]              AS creditos,
+          [CUPOS]                              AS cupos,
+          [ESTADO (activo - inactivo)]         AS estado,
+          [CÓDIGO SNIES]                       AS codigoSnies,
+          [CODIGO BANNER]                      AS codigoBanner,
+          [REGISTRO ÚNICO]                     AS registroUnico,
+          [RESOLUCIÓN]                         AS resolucion,
+          [RECTORÍA DUEÑA DEL PROGRAMA]        AS rectoria,
+          [DEPARTAMENTO (SEDE DEL PROGRAMA)]   AS departamento,
+          [MUNICIPIO (SEDE DEL PROGRAMA)]      AS municipio,
+          [COBERTURA DEL PROGRAMA]             AS cobertura,
+          [Tipo]                               AS tipo,
+          [FECHA RESOLUCIÓN]                   AS fechaResolucion,
+          [FECHA DE VENCIMIENTO]               AS fechaVencimiento,
+          [RESOLUCIÓN DE ACREDITACIÓN]         AS resolucionAcreditacion,
+          [FECHA ACREDITACIÓN]                 AS fechaAcreditacion,
+          [VIGENCIA (AÑOS)]                    AS vigencia,
+          [ACREDITADOS]                        AS acreditados
+        FROM Oferta_Activa
+        WHERE LOWER(LTRIM(RTRIM(
+          REPLACE(REPLACE(REPLACE(REPLACE(
+            CONVERT(NVARCHAR(200), [RECTORÍA DUEÑA DEL PROGRAMA] COLLATE Latin1_General_CI_AI),
+          'á','a'),'é','e'),'í','i'),'ó','o')
+        ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
+      `);
       await setCache('oferta:all', r.recordset);
       console.log(`✅ oferta:all → ${r.recordset.length}`);
     } catch (e) { console.warn('⚠️ Error oferta:', e.message); }
