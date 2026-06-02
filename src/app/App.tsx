@@ -763,8 +763,6 @@ const forceRefresh = async () => {
  // ── Disparar carga — solo si hay combos cargados (Redis tiene datos) ──
 useEffect(() => {
   if (selYears.length === 0) return;
-  // Si los combos están vacíos, significa que Redis no tiene datos todavía.
-  // No intentar cargar → esperar a que el usuario pulse "Actualizar"
   if (base.modalidades.length === 0 && base.centros.length === 0) {
     setIsLoading(false);
     return;
@@ -787,6 +785,8 @@ useEffect(() => {
   selSedes,
   selFacultades,
   base.periodicidades.length,
+  base.modalidades.length,   // ← AGREGAR
+  base.centros.length,       // ← AGREGAR
 ]);
 
   // ==================== ACCIONES ====================
