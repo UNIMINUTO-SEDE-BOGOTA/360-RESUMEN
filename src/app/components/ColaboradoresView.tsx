@@ -422,7 +422,7 @@ return (
                 <Pie
                   data={contratoData}
                   dataKey="value"
-                  outerRadius={70}
+                  outerRadius={60}
                   label={({ pct, cx, cy, midAngle, outerRadius }) => {
                     const RADIAN = Math.PI / 180;
                     const radius = outerRadius + 20;
