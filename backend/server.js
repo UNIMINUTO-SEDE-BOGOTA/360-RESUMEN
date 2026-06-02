@@ -252,11 +252,12 @@ try {
           [Periodo]                            AS periodo,
           [Rectoría]                           AS rectoria
         FROM Colaboradores
-        WHERE LOWER(LTRIM(RTRIM(
-          REPLACE(REPLACE(REPLACE(REPLACE(
-            CONVERT(NVARCHAR(200), [Rectoría] COLLATE Latin1_General_CI_AI),
-          'á','a'),'é','e'),'í','i'),'ó','o')
-        ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
+WHERE LOWER(LTRIM(RTRIM(
+  REPLACE(REPLACE(REPLACE(REPLACE(
+    CONVERT(NVARCHAR(200), [Rectoría] COLLATE Latin1_General_CI_AI),
+  'á','a'),'é','e'),'í','i'),'ó','o')
+))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
+AND [Periodo] = '2026-1'
       `);
       await setCache('colaboradores:all', r.recordset);
       console.log(`✅ colaboradores:all → ${r.recordset.length}`);
