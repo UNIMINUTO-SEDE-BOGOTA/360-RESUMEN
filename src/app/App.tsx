@@ -414,6 +414,10 @@ useEffect(() => {
 
       const rows = res.rows;
 
+      console.log("🔍 rows recibidos:", rows.length, rows[0]);
+
+      
+
       // ── byCentro ──
       const centroMap: Record<string, any> = {};
 
