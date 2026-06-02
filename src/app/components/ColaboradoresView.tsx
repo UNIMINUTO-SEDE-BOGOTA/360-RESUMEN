@@ -231,7 +231,7 @@ export default function ColaboradoresView() {
       const duracion = r.duracionContrato || "";
   
       const key = duracion === "1 Año o Más" || tipo.toLowerCase().includes("indefinido")
-        ? "Indefinido"
+        ? "Contrato Indefinido"
         : tipo;
   
       map[key] = (map[key] || 0) + (r.total || 0);
