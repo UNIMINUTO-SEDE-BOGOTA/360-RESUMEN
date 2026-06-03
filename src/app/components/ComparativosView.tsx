@@ -241,37 +241,25 @@ export default function ComparativosView() {
 
   // Oferta Académica: programas activos con sede en Bogotá
   
-  const ofertaAcademica = useMemo(() => {
-    return ofertaRows.filter((r) => {
-      const dep = (r.departamento || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .trim();
 
-      return dep === "bogota"; // ✅ SOLO Bogotá exacto
-    }).length;
-  }, [ofertaRows]);
+const ofertaAcademica = useMemo(() => {
+  return ofertaRows.length; // ✅ cuenta todo sin filtrar
+}, [ofertaRows]);
+
 
 
   // Programas Acreditados: mismos programas de Bogotá con acreditados = 'SI' o similar
   const programasAcreditados = useMemo(() => {
-  return ofertaRows.filter((r) => {
-    const dep = (r.departamento || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .trim();
-
-    const acred = (r.acreditados || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .trim();
-
-    return dep === "bogota" && acred === "acreditado"; // ✅ condición exacta
-  }).length;
-}, [ofertaRows]);
+    return ofertaRows.filter((r) => {
+      const acred = (r.acreditados || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .trim();
+  
+      return acred.includes("acreditado"); // ✅ sin filtro de ciudad
+    }).length;
+  }, [ofertaRows]);
 
   // ── PROFESORES TC ──────────────────────────
   const profTC25 = useMemo(() => colab25.filter((r) => r.tipo === "Profesores"), [colab25]);
@@ -524,13 +512,6 @@ export default function ComparativosView() {
           <div className="border rounded-md bg-white p-3 text-center">
             <div className="text-[10px] text-gray-500 mb-0.5">Programas Acreditados</div>
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : programasAcreditados}</div>
-          </div>
-
-          {/* FILTROS */}
-          <div className="border rounded-md bg-white p-2 flex flex-col gap-2">
-            <MultiCheckDropdown label="Modalidad" options={modalidadOpts} selected={selModalidades} onChange={setSelModalidades} />
-            <MultiCheckDropdown label="Nivel Académico" options={nivelOpts} selected={selNiveles} onChange={setSelNiveles} />
-            <MultiCheckDropdown label="Periodo" options={periodoOpts} selected={selPeriodos} onChange={setSelPeriodos} />
           </div>
 
         </div>
