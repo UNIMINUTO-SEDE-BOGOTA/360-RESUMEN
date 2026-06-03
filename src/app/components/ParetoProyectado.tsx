@@ -147,21 +147,31 @@ export function ParetoProyectado({
 />
       </div>
 
-<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+// DESPUÉS
+<div className="flex flex-col gap-4">
 
-  {/* Tablas — primero en móvil y desktop */}
-  <div className="order-1 lg:order-1">
-    <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
-  </div>
-
-  {/* Gráficas — segundo en móvil y desktop */}
-  <div className="order-2 lg:order-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
-    <div className="flex flex-col gap-3">
+  {/* PREGRADO */}
+  <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+    <ParetoTablas
+      pareto80={{ pregrado: pareto80.pregrado, posgrado: [] }}
+      pareto20={{ pregrado: pareto20.pregrado, posgrado: [] }}
+    />
+    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
       <GraficaPareto
         titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
         colorHeader="bg-slate-700"
         data={dataChartPregrado}
       />
+    </div>
+  </div>
+
+  {/* POSGRADO */}
+  <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+    <ParetoTablas
+      pareto80={{ pregrado: [], posgrado: pareto80.posgrado }}
+      pareto20={{ pregrado: [], posgrado: pareto20.posgrado }}
+    />
+    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
       <GraficaPareto
         titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
         colorHeader="bg-purple-700"
@@ -169,6 +179,7 @@ export function ParetoProyectado({
       />
     </div>
   </div>
+
 </div>
 </div>
   );
