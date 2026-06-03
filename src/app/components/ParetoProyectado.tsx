@@ -147,28 +147,25 @@ export function ParetoProyectado({
 />
       </div>
 
-<div className="flex flex-col gap-3">
+<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
-  {/* TABLAS — dos columnas pregrado/posgrado en pantallas grandes */}
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-    <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
+  <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
+
+  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div className="flex flex-col gap-3">
+      <GraficaPareto
+        titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
+        colorHeader="bg-slate-700"
+        data={dataChartPregrado}
+      />
+      <GraficaPareto
+        titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
+        colorHeader="bg-purple-700"
+        data={dataChartPosgrado}
+      />
+    </div>
   </div>
 
-  {/* GRÁFICA — ancho completo */}
-  <div className="flex flex-col gap-3">
-  <GraficaPareto
-    titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
-    colorHeader="bg-slate-700"
-    data={dataChartPregrado}
-  />
-  <GraficaPareto
-    titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
-    colorHeader="bg-purple-700"
-    data={dataChartPosgrado}
-  />
 </div>
-
-      </div>
-    </div>
   );
 }
