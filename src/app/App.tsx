@@ -34,6 +34,7 @@ interface BaseOptions {
   niveles: string[];
   periodos: string[];
   centros: string[];
+  sufijoPeriodos: string[]; 
   periodicidades: string[];
   nivelesFormacion: string[];
   facultades: string[];
@@ -75,6 +76,17 @@ const ORDEN_CENTROS = [
 const clean = (t: string) => (t || "").trim().toLowerCase();
 
 // ==================== HELPERS ====================
+const getSufijos = (periodosCombinados: string[]): string[] => {
+  const sufijos = new Set<string>();
+  periodosCombinados.forEach(p => {
+    const idx = p.indexOf("-");
+    if (idx !== -1) {
+      const sufijo = p.slice(idx + 1);
+      if (sufijo) sufijos.add(sufijo);
+    }
+  });
+  return [...sufijos].sort();
+};
 
 const normalizeNivel = (nivel: string): string => {
   const n = (nivel || "").toString().toLowerCase().trim();
@@ -149,7 +161,8 @@ function App() {
     periodicidades: [],
     nivelesFormacion: [],
     facultades: [],
-    sedes: []
+    sedes: [],
+    sufijoPeriodos: []
   });
 
   const fechaCorte = "20 de marzo de 2026";
@@ -158,17 +171,30 @@ function App() {
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
   const [subViewPareto, setSubViewPareto] = useState<"ejecutado" | "proyectado">("ejecutado");
 
-  const [selYears, setSelYears] = useState<string[]>([]);
-  const [selModalidades, setSelModalidades] = useState<string[]>([]);
-  const [selNiveles, setSelNiveles] = useState<string[]>([]);
-  const [selPeriodos, setSelPeriodos] = useState<string[]>([]);
-  const [selCentros, setSelCentros] = useState<string[]>([]);
-  const [selNivelFormacion, setSelNivelFormacion] = useState<string[]>([]);
-  const [selProgramas, setSelProgramas] = useState<string[]>([]);
-  const [selPeriodicidades, setSelPeriodicidades] = useState<string[]>([]);
-  const [selNivelesFormacion, setSelNivelesFormacion] = useState<string[]>([]);
-  const [selSedes, setSelSedes] = useState<string[]>([]);
-  const [selFacultades, setSelFacultades] = useState<string[]>([]);
+    // DASHBOARD
+  const [dashYears, setDashYears] = useState<string[]>([]);
+  const [dashModalidades, setDashModalidades] = useState<string[]>([]);
+  const [dashNiveles, setDashNiveles] = useState<string[]>([]);
+  const [dashPeriodos, setDashPeriodos] = useState<string[]>([]);
+  const [dashCentros, setDashCentros] = useState<string[]>([]);
+  
+  // PARETO EJECUTADO
+  const [execYears, setExecYears] = useState<string[]>([]);
+  const [execModalidades, setExecModalidades] = useState<string[]>([]);
+  const [execNivelFormacion, setExecNivelFormacion] = useState<string[]>([]);
+  const [execPeriodos, setExecPeriodos] = useState<string[]>([]);
+  const [execCentros, setExecCentros] = useState<string[]>([]);
+  const [execProgramas, setExecProgramas] = useState<string[]>([]);
+  
+  // PARETO PROYECTADO
+  const [projModalidades, setProjModalidades] = useState<string[]>([]);
+  const [projNiveles, setProjNiveles] = useState<string[]>([]);
+  const [projPeriodos, setProjPeriodos] = useState<string[]>([]);
+  const [projCentros, setProjCentros] = useState<string[]>([]);
+  const [projPeriodicidades, setProjPeriodicidades] = useState<string[]>([]);
+  const [projNivelesFormacion, setProjNivelesFormacion] = useState<string[]>([]);
+  const [projSedes, setProjSedes] = useState<string[]>([]);
+  const [projFacultades, setProjFacultades] = useState<string[]>([]);
 
   const [stats, setStats] = useState<StatsData | null>(null);
   const [modalidadBreakdown, setModalidadBreakdown] = useState<BreakdownItem[]>([]);
@@ -177,7 +203,6 @@ function App() {
   const [byCentro, setByCentro] = useState<any[]>([]);
   const [byEscuela, setByEscuela] = useState<any[]>([]);
   const [virtual2026S1, setVirtual2026S1] = useState<any[]>([]);
-
   const [paretoData, setParetoData] = useState<ParetoItem[]>([]);
   const [pareto80, setPareto80] = useState<ParetoItem[]>([]);
   const [pareto20, setPareto20] = useState<ParetoItem[]>([]);
@@ -189,45 +214,43 @@ function App() {
   const [err, setErr] = useState<string | null>(null);
   const reqId = useRef(0);
 
-  // ==================== PARSED YEARS / PERIODOS ====================
-
-  const { parsedYears, parsedPeriodos } = useMemo(() => {
-    const years: string[] = [];
-    const periodos: string[] = [];
-
-    selPeriodos.forEach(p => {
-      if (p.includes("-")) {
-        const idx = p.indexOf("-");
-        const year = p.slice(0, idx);
-        const periodo = p.slice(idx + 1);
-        if (/^\d{4}$/.test(year)) years.push(year);
-        if (periodo) periodos.push(periodo);
-      } else {
-        periodos.push(p);
-      }
-    });
-
-    return {
-      parsedYears: [...new Set(years)],
-      parsedPeriodos: [...new Set(periodos)],
-    };
-  }, [selPeriodos]);
-
-  // ==================== FILTROS EFECTIVOS ====================
-
-  const filtersDashboard: F = useMemo(() => {
-    const hasPeriodFilter = selPeriodos.length > 0;
-    return {
-      years: parsedYears.length ? parsedYears : selYears,
-      modalidades: selModalidades,
-      niveles: selNiveles,
-      periodos: hasPeriodFilter ? parsedPeriodos : [],
-      centros: selCentros,
-    };
-  }, [parsedYears, parsedPeriodos, selYears, selModalidades, selNiveles, selCentros, selPeriodos]);
-
   // ==================== CARGA BASE DE COMBOS ====================
 
+  // Dashboard
+useEffect(() => {
+  if (dashYears.length === 0 && base.years.length === 0) return;
+  if (base.modalidades.length === 0 && base.centros.length === 0) return;
+  if (subViewEstudiantes !== "pareto") loadDashboard();
+}, [subViewEstudiantes, dashYears, dashModalidades, dashNiveles, dashPeriodos, dashCentros,
+    base.modalidades.length, base.centros.length]);
+
+// Pareto ejecutado
+useEffect(() => {
+  if (base.modalidades.length === 0 && base.centros.length === 0) return;
+  if (subViewEstudiantes === "pareto" && subViewPareto === "ejecutado") loadPareto();
+}, [subViewEstudiantes, subViewPareto, execYears, execModalidades, execNivelFormacion,
+    execPeriodos, execCentros, execProgramas, base.modalidades.length]);
+
+// Pareto proyectado — su propia loadPareto con filtros proj*
+useEffect(() => {
+  if (base.modalidades.length === 0) return;
+  if (subViewEstudiantes === "pareto" && subViewPareto === "proyectado") {
+    const filters = {
+      modalidades: projModalidades,
+      niveles: projNiveles,
+      periodos: projPeriodos,
+      centros: projCentros,
+      periodicidades: projPeriodicidades,
+      nivelesFormacion: projNivelesFormacion,
+      sedes: projSedes,
+      facultades: projFacultades,
+    };
+    fetchTableMulti(filters).then(res => buildPareto(res.rows));
+  }
+}, [subViewEstudiantes, subViewPareto, projModalidades, projNiveles, projPeriodos,
+    projCentros, projPeriodicidades, projNivelesFormacion, projSedes, projFacultades,
+    base.modalidades.length]);
+  
   useEffect(() => {
     (async () => {
       try {
@@ -239,15 +262,18 @@ function App() {
       }
     })();
   }, []);
-
-  useEffect(() => {
-    if (!base.years || base.years.length === 0) return;
-    setSelYears(prev => {
-      if (prev.length > 0 && prev.every(y => base.years.includes(y))) return prev;
-      return [base.years[0]];
-    });
-  }, [base.years]);
-
+  
+useEffect(() => {
+  if (!base.years || base.years.length === 0) return;
+  const firstYear = base.years[0];
+  setDashYears(prev =>
+    prev.length > 0 && prev.every(y => base.years.includes(y)) ? prev : [firstYear]
+  );
+  setExecYears(prev =>
+    prev.length > 0 && prev.every(y => base.years.includes(y)) ? prev : [firstYear]
+  );
+}, [base.years]);
+  
 useEffect(() => {
   (async () => {
     const all = await fetchAzureData(); // devuelve [] si no hay cache, sin errores
@@ -305,15 +331,14 @@ useEffect(() => {
       return a.localeCompare(b, 'es', { sensitivity: 'base' });
     });
  
-    setSelNiveles(prev =>
-      prev.map(normalizeNivel).filter(v => ['Pregrado', 'Posgrado'].includes(v))
-    );
+
  
     setBase(prev => ({
       ...prev,
       modalidades,
       niveles,
       periodos: periodosCombinados,
+      sufijoPeriodos: getSufijos(periodosCombinados), 
       centros,
       periodicidades,
       nivelesFormacion,
@@ -337,22 +362,18 @@ useEffect(() => {
     fill: p.porcentaje <= 80 ? "#22c55e" : "#93c5fd"
   }));
 
-  const loadPareto = async () => {
-    const filters = {
-      years: parsedYears.length ? parsedYears : selYears,
-      modalidades: selModalidades,
-      niveles: selNiveles,
-      nivelesFormacion: selNivelFormacion.length ? selNivelFormacion : undefined,
-      periodos: parsedPeriodos,
-      centros: selCentros,
-      programas: selProgramas,
-      periodicidades: selPeriodicidades,
-      sedes: selSedes,
-      facultades: selFacultades
-    };
-    const res = await fetchTableMulti(filters);
-    buildPareto(res.rows);
+const loadPareto = async () => {
+  const filters = {
+    years: execYears.length ? execYears : [base.years[0]],
+    modalidades: execModalidades,
+    nivelesFormacion: execNivelFormacion.length ? execNivelFormacion : undefined,
+    periodos: execPeriodos,
+    centros: execCentros,
+    programas: execProgramas,
   };
+  const res = await fetchTableMulti(filters);
+  buildPareto(res.rows);
+};
 
   const buildPareto = (data: any[]) => {
     const map: Record<string, number> = {};
@@ -406,11 +427,11 @@ useEffect(() => {
 
     try {
       const res = await fetchTableMulti({
-        years: selYears,
-        modalidades: selModalidades,
-        niveles: selNiveles,
-        periodos: selPeriodos.length ? parsedPeriodos : [],
-        centros: selCentros,
+        years: dashYears.length ? dashYears : [base.years[0]],   // ← dash*
+        modalidades: dashModalidades,
+        niveles: dashNiveles,
+        periodos: dashPeriodos,   // ya son sufijos S1/S2/etc.
+        centros: dashCentros,
         pageSize: 10000,
       });
 
@@ -749,6 +770,7 @@ const forceRefresh = async () => {
         modalidades,
         niveles,
         periodos: periodosCombinados,
+        sufijoPeriodos: getSufijos(periodosCombinados),
         centros,
         periodicidades,
         nivelesFormacion,
@@ -765,63 +787,38 @@ const forceRefresh = async () => {
     setIsLoading(false);
   }
 };
-  // ── Disparar carga — GUARD: no corre hasta que haya año seleccionado ──
- // ── Disparar carga — solo si hay combos cargados (Redis tiene datos) ──
-  useEffect(() => {
-    console.log("🔍 useEffect disparado", {
-      selYears,
-      modalidades: base.modalidades.length,
-      centros: base.centros.length,
-    });
-  
-    if (selYears.length === 0) {
-      console.log("❌ bloqueado: sin años");
-      return;
-    }
-    if (base.modalidades.length === 0 && base.centros.length === 0) {
-      console.log("❌ bloqueado: combos vacíos");
-      setIsLoading(false);
-      return;
-    }
-  
-    console.log("✅ llamando loadDashboard");
-    if (subViewEstudiantes === "pareto") {
-      loadPareto();
-    } else {
-      loadDashboard();
-    }
-  }, [
-    subViewEstudiantes,
-    selYears,
-    selModalidades,
-    selNiveles,
-    selPeriodos,
-    selCentros,
-    selPeriodicidades,
-    selNivelFormacion,
-    selProgramas,
-    selSedes,
-    selFacultades,
-    base.periodicidades.length,
-    base.modalidades.length,
-    base.centros.length,
-  ]);
 
   // ==================== ACCIONES ====================
+  
+  // ── CAMBIO: limpiar cada conjunto por separado ──
+const clearDash = () => {
+  setDashYears([base.years[0] ?? "2026"]);
+  setDashModalidades([]);
+  setDashNiveles([]);
+  setDashPeriodos([]);
+  setDashCentros([]);
+};
 
-  const clearAll = () => {
-    setSelYears([base.years[0] ?? "2026"]);
-    setSelModalidades([]);
-    setSelNiveles([]);
-    setSelPeriodos([]);
-    setSelCentros([]);
-    setSelNivelFormacion([]);
-    setSelProgramas([]);
-    setSelPeriodicidades([]);
-    setSelNivelesFormacion([]);
-    setSelSedes([]);
-    setSelFacultades([]);
-  };
+const clearExec = () => {
+  setExecYears([base.years[0] ?? "2026"]);
+  setExecModalidades([]);
+  setExecNivelFormacion([]);
+  setExecPeriodos([]);
+  setExecCentros([]);
+  setExecProgramas([]);
+};
+
+const clearProj = () => {
+  setProjModalidades([]);
+  setProjNiveles([]);
+  setProjPeriodos([]);
+  setProjCentros([]);
+  setProjPeriodicidades([]);
+  setProjNivelesFormacion([]);
+  setProjSedes([]);
+  setProjFacultades([]);
+};
+  
 
   // ==================== KEY para forzar remount de DashboardCharts ====================
   const dashboardKey = `dash-${stats?.estudiantes ?? 0}-${byCentro.length}-${byEscuela.length}`;
@@ -1003,21 +1000,21 @@ const forceRefresh = async () => {
                       byCentro={byCentro}
                       byEscuela={byEscuela}
                       virtual2026S1={virtual2026S1}
-                      filtersComponent={
-                        <FiltersMulti
-                          years={base.years.map(y => ({ label: y, value: y }))}
-                          modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
-                          niveles={base.niveles.map(n => ({ label: n, value: n }))}
-                          periodos={base.periodos.map(p => ({ label: p, value: p }))}
-                          centros={base.centros.map(c => ({ label: c, value: c }))}
-                          selYears={selYears} setSelYears={setSelYears}
-                          selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                          selNiveles={selNiveles} setSelNiveles={setSelNiveles}
-                          selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
-                          selCentros={selCentros} setSelCentros={setSelCentros}
-                          clearAll={clearAll}
-                        />
-                      }
+                        filtersComponent={
+                          <FiltersMulti
+                            years={base.years.map(y => ({ label: y, value: y }))}
+                            modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
+                            niveles={base.niveles.map(n => ({ label: n, value: n }))}
+                            periodos={base.sufijoPeriodos.map(p => ({ label: p, value: p }))}
+                            centros={base.centros.map(c => ({ label: c, value: c }))}
+                            selYears={dashYears}          setSelYears={setDashYears}
+                            selModalidades={dashModalidades} setSelModalidades={setDashModalidades}
+                            selNiveles={dashNiveles}      setSelNiveles={setDashNiveles}
+                            selPeriodos={dashPeriodos}    setSelPeriodos={setDashPeriodos}
+                            selCentros={dashCentros}      setSelCentros={setDashCentros}
+                            clearAll={clearDash}
+                          />
+                        }
                     />
                   )}
 
@@ -1025,29 +1022,29 @@ const forceRefresh = async () => {
                   {subViewEstudiantes === "pareto" && (
                     <>
                       {subViewPareto === "proyectado" ? (
-
-                        <ParetoProyectado
-                          fechaCorte={fechaCorte}
-                          base={base}
-                          listaProgramas={listaProgramas}
-                          pareto80={pareto80}
-                          pareto20={pareto20}
-                          dataChart={dataChart}
-                          selYears={selYears} setSelYears={setSelYears}
-                          selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                          selNivelFormacion={selNivelFormacion} setSelNivelFormacion={setSelNivelFormacion}
-                          selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
-                          selCentros={selCentros} setSelCentros={setSelCentros}
-                          selProgramas={selProgramas} setSelProgramas={setSelProgramas}
-                          selPeriodicidades={selPeriodicidades} setSelPeriodicidades={setSelPeriodicidades}
-                          selNiveles={selNiveles} setSelNiveles={setSelNiveles}
-                          selNivelesFormacion={selNivelesFormacion} setSelNivelesFormacion={setSelNivelesFormacion}
-                          selSedes={selSedes} setSelSedes={setSelSedes}
-                          selFacultades={selFacultades} setSelFacultades={setSelFacultades}
-                          clearAll={clearAll}
-                          onVolver={() => setSubViewEstudiantes("dashboard")}
-                          onIrEjecutado={() => setSubViewPareto("ejecutado")}
-                        />
+                      
+                      <ParetoProyectado
+                        fechaCorte={fechaCorte}
+                        base={{ ...base, periodos: base.sufijoPeriodos }}
+                        listaProgramas={listaProgramas}
+                        pareto80={pareto80}
+                        pareto20={pareto20}
+                        dataChart={dataChart}
+                        selModalidades={projModalidades}      setSelModalidades={setProjModalidades}
+                        selNiveles={projNiveles}              setSelNiveles={setProjNiveles}
+                        selNivelFormacion={projNivelesFormacion} setSelNivelFormacion={setProjNivelesFormacion}
+                        selPeriodos={projPeriodos}            setSelPeriodos={setProjPeriodos}
+                        selCentros={projCentros}              setSelCentros={setProjCentros}
+                        selPeriodicidades={projPeriodicidades} setSelPeriodicidades={setProjPeriodicidades}
+                        selNivelesFormacion={projNivelesFormacion} setSelNivelesFormacion={setProjNivelesFormacion}
+                        selSedes={projSedes}                  setSelSedes={setProjSedes}
+                        selFacultades={projFacultades}        setSelFacultades={setProjFacultades}
+                        selProgramas={[]}  setSelProgramas={() => {}}
+                        selYears={[]}      setSelYears={() => {}}
+                        clearAll={clearProj}
+                        onVolver={() => setSubViewEstudiantes("dashboard")}
+                        onIrEjecutado={() => setSubViewPareto("ejecutado")}
+                      />
 
                       ) : (
 
@@ -1068,26 +1065,24 @@ const forceRefresh = async () => {
                           </div>
 
                           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <FiltersMulti
-                              years={base.years.map(y => ({ label: y, value: y }))}
-                              modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
-                              niveles={[]}
-                              selNiveles={[]}
-                              setSelNiveles={() => {}}
-                              nivelesFormacion={base.nivelesFormacion.map(n => ({ label: n, value: n }))}
-                              selNivelesFormacion={selNivelFormacion}
-                              setSelNivelesFormacion={setSelNivelFormacion}
-                              periodos={base.periodos.map(p => ({ label: p, value: p }))}
-                              centros={base.centros.map(c => ({ label: c, value: c }))}
-                              programas={listaProgramas}
-                              selProgramas={selProgramas}
-                              setSelProgramas={setSelProgramas}
-                              selYears={selYears} setSelYears={setSelYears}
-                              selModalidades={selModalidades} setSelModalidades={setSelModalidades}
-                              selPeriodos={selPeriodos} setSelPeriodos={setSelPeriodos}
-                              selCentros={selCentros} setSelCentros={setSelCentros}
-                              clearAll={clearAll}
-                            />
+                                <FiltersMulti
+                                  years={base.years.map(y => ({ label: y, value: y }))}
+                                  modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
+                                  niveles={[]}
+                                  selNiveles={[]} setSelNiveles={() => {}}
+                                  nivelesFormacion={base.nivelesFormacion.map(n => ({ label: n, value: n }))}
+                                  selNivelesFormacion={execNivelFormacion}
+                                  setSelNivelesFormacion={setExecNivelFormacion}
+                                  periodos={base.sufijoPeriodos.map(p => ({ label: p, value: p }))}
+                                  centros={base.centros.map(c => ({ label: c, value: c }))}
+                                  programas={listaProgramas}
+                                  selProgramas={execProgramas}    setSelProgramas={setExecProgramas}
+                                  selYears={execYears}            setSelYears={setExecYears}
+                                  selModalidades={execModalidades} setSelModalidades={setExecModalidades}
+                                  selPeriodos={execPeriodos}      setSelPeriodos={setExecPeriodos}
+                                  selCentros={execCentros}        setSelCentros={setExecCentros}
+                                  clearAll={clearExec}
+                                />
                           </div>
 
                           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
