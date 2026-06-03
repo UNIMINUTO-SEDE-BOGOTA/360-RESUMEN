@@ -155,7 +155,7 @@ export function ParetoProyectado({
   </div>
 
   {/* GRÁFICA — ancho completo */}
-  <<div className="flex flex-col gap-3">
+  <div className="flex flex-col gap-3">
   <GraficaPareto
     titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
     colorHeader="bg-slate-700"
