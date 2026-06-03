@@ -165,7 +165,7 @@ export function ParetoProyectado({
       />
     </div>
   </div>
-
+</div>
 </div>
   );
 }
