@@ -43,6 +43,7 @@ const ORDEN_FORMACION = [
 
 interface CompRow {
   Año: number;
+  Periodo: string;   
   Modalidad: string;
   "Nivel Académico": string;
   "Nivel de Formación": string;
@@ -212,22 +213,28 @@ export default function ComparativosView() {
     [compRows]
   );
   const periodoOpts = useMemo(
-    () => [...new Set(compRows.map((r) => String(r.Año)).filter(Boolean))].sort(),
-    [compRows]
-  );
-
+  () => [...new Set(compRows.map((r) => `${r.Año}-${r.Periodo}`).filter(Boolean))].sort(),
+  [compRows]
+);
   // ── FILTRAR ESTUDIANTES ────────────────────
   const filteredRows = useMemo(() => {
-    return compRows.filter((r) => {
-      if (selModalidades.length > 0 && !selModalidades.includes(r.Modalidad)) return false;
-      if (selNiveles.length > 0 && !selNiveles.includes(r["Nivel Académico"])) return false;
-      if (selPeriodos.length > 0 && !selPeriodos.includes(String(r.Año))) return false;
-      return true;
-    });
-  }, [compRows, selModalidades, selNiveles, selPeriodos]);
+  return compRows.filter((r) => {
+    if (selModalidades.length > 0 && !selModalidades.includes(r.Modalidad)) return false;
+    if (selNiveles.length > 0 && !selNiveles.includes(r["Nivel Académico"])) return false;
+    if (selPeriodos.length > 0 && !selPeriodos.includes(`${r.Año}-${r.Periodo}`)) return false;
+    return true;
+  });
+}, [compRows, selModalidades, selNiveles, selPeriodos]);
 
-  const rows25 = useMemo(() => filteredRows.filter((r) => r.Año === 2025), [filteredRows]);
-  const rows26 = useMemo(() => filteredRows.filter((r) => r.Año === 2026), [filteredRows]);
+  const rows25 = useMemo(
+    () => filteredRows.filter((r) => r.Año === 2025 && (r.Periodo === "S1" || r.Periodo === "Q2")),
+    [filteredRows]
+  );
+  
+  const rows26 = useMemo(
+    () => filteredRows.filter((r) => r.Año === 2026 && (r.Periodo === "S1" || r.Periodo === "Q2")),
+    [filteredRows]
+  );
 
   // ── KPIs ───────────────────────────────────
   const totalColab26 = useMemo(
@@ -297,7 +304,7 @@ const ofertaAcademica = useMemo(() => {
   const colabTCTotal25 = colabTCRows.reduce((s, r) => s + r.v25, 0);
   const colabTCTotal26 = colabTCRows.reduce((s, r) => s + r.v26, 0);
 
-  // ── ESTUDIANTES TOTALES S1Q1 ───────────────
+  // ── ESTUDIANTES TOTALES S1Q2 ───────────────
   interface SubItem { label: string; v25: number; v26: number }
   interface NivelGroup { nivel: string; subniveles: SubItem[]; v25: number; v26: number }
 
@@ -439,7 +446,7 @@ const ofertaAcademica = useMemo(() => {
 
           {/* Estudiantes Totales */}
           <div className="border rounded-md overflow-hidden bg-white">
-            <TableHeader title="ESTUDIANTES TOTALES – S1Q1" />
+            <TableHeader title="ESTUDIANTES TOTALES – S1Q2" />
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
@@ -499,7 +506,7 @@ const ofertaAcademica = useMemo(() => {
           </div>
 
           <div className="border rounded-md bg-white p-3 text-center">
-            <div className="text-[10px] text-gray-500 mb-0.5">Estudiantes S1–Q1</div>
+            <div className="text-[10px] text-gray-500 mb-0.5">Estudiantes S1–Q2</div>
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : f(totalEst26)}</div>
           </div>
 
@@ -559,7 +566,7 @@ const ofertaAcademica = useMemo(() => {
 
           {/* Estudiantes Modalidad */}
           <div className="border rounded-md overflow-hidden bg-white">
-            <TableHeader title="ESTUDIANTES MODALIDAD – S1Q1" />
+            <TableHeader title="ESTUDIANTES MODALIDAD – S1Q2" />
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
