@@ -7,6 +7,7 @@ import {
 import { FiltersMulti } from "./FiltersMulti";
 import { ParetoTablas } from "./ParetoTablas";
 import { GraficaPareto } from "./GraficaPareto";
+import { Panel } from "./Panel";
 
 
 interface Props {
@@ -147,37 +148,52 @@ export function ParetoProyectado({
 />
       </div>
 
-// DESPUÉS
 <div className="flex flex-col gap-4">
 
   {/* PREGRADO */}
-  <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+  
+div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+
+  <Panel title="Tabla Pareto Pregrado">
     <ParetoTablas
       pareto80={{ pregrado: pareto80.pregrado, posgrado: [] }}
       pareto20={{ pregrado: pareto20.pregrado, posgrado: [] }}
     />
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-      <GraficaPareto
-        titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
-        colorHeader="bg-slate-700"
-        data={dataChartPregrado}
-      />
-    </div>
+  </Panel>
+
+  <Panel title="Gráfica Pareto Pregrado">
+    <GraficaPareto
+      titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
+      colorHeader="bg-slate-700"
+      data={dataChartPregrado}
+    />
+  </Panel>
+
+</div>
+
   </div>
 
   {/* POSGRADO */}
-  <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+  
+<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+
+  <Panel title="Tabla Pareto Posgrado">
     <ParetoTablas
       pareto80={{ pregrado: [], posgrado: pareto80.posgrado }}
       pareto20={{ pregrado: [], posgrado: pareto20.posgrado }}
     />
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-      <GraficaPareto
-        titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
-        colorHeader="bg-purple-700"
-        data={dataChartPosgrado}
-      />
-    </div>
+  </Panel>
+
+  <Panel title="Gráfica Pareto Posgrado">
+    <GraficaPareto
+      titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
+      colorHeader="bg-purple-700"
+      data={dataChartPosgrado}
+    />
+  </Panel>
+
+</div>
+
   </div>
 
 </div>
