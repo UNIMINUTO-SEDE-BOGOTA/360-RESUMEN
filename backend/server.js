@@ -320,13 +320,13 @@ for (const periodo of ['2025-1', '2026-1']) {
     FROM [Poblacion_Estudiantil]
     WHERE ${buildRectoriaFilter()}
       AND [Año] IN (2025, 2026)
-      AND UPPER(LTRIM(RTRIM(CONVERT(NVARCHAR(30), [Periodo])))) IN ('S1', 'Q2')
+      AND [Periodo] IN ('S1', 'Q2')
     GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación], [Periodo]
   `);
   await setCache('comparativos:all', r.recordset);
   console.log(`✅ comparativos:all → ${r.recordset.length}`);
 } catch (e) { console.warn('⚠️ Error comparativos:', e.message); }
-
+    
     // ── 6. Tablas disponibles ────────────────────────────────────────────────
     try {
       const r = await pool.request().query(`
