@@ -18,6 +18,7 @@ import ColaboradoresView from "./components/ColaboradoresView";
 import ComparativosView from "./components/ComparativosView";
 import { OfertaView } from "./components/OfertaView";
 import { InvestigacionView } from "./components/InvestigacionView";
+import { ParetoTablas } from "./ParetoTablas";
 
 
 const API_URL =
@@ -187,6 +188,7 @@ function App() {
   const [execProgramas, setExecProgramas] = useState<string[]>([]);
   
   // PARETO PROYECTADO
+  const [projYears, setProjYears] = useState<string[]>([]);
   const [projModalidades, setProjModalidades] = useState<string[]>([]);
   const [projNiveles, setProjNiveles] = useState<string[]>([]);
   const [projPeriodos, setProjPeriodos] = useState<string[]>([]);
@@ -204,8 +206,8 @@ function App() {
   const [byEscuela, setByEscuela] = useState<any[]>([]);
   const [virtual2026S1, setVirtual2026S1] = useState<any[]>([]);
   const [paretoData, setParetoData] = useState<ParetoItem[]>([]);
-  const [pareto80, setPareto80] = useState<ParetoItem[]>([]);
-  const [pareto20, setPareto20] = useState<ParetoItem[]>([]);
+  const [pareto80, setPareto80] = useState<{ pregrado: ParetoItem[]; posgrado: ParetoItem[] }>({ pregrado: [], posgrado: [] });
+  const [pareto20, setPareto20] = useState<{ pregrado: ParetoItem[]; posgrado: ParetoItem[] }>({ pregrado: [], posgrado: [] });
   const [listaProgramas, setListaProgramas] = useState<{ label: string; value: string }[]>([]);
   const [highlightBar, setHighlightBar] = useState(false);
   const [highlightLine, setHighlightLine] = useState(false);
@@ -236,6 +238,7 @@ useEffect(() => {
   if (base.modalidades.length === 0) return;
   if (subViewEstudiantes === "pareto" && subViewPareto === "proyectado") {
     const filters = {
+      years: projYears,
       modalidades: projModalidades,
       niveles: projNiveles,
       periodos: projPeriodos,
@@ -247,7 +250,7 @@ useEffect(() => {
     };
     fetchTableMulti(filters).then(res => buildPareto(res.rows));
   }
-}, [subViewEstudiantes, subViewPareto, projModalidades, projNiveles, projPeriodos,
+}, [subViewEstudiantes, subViewPareto, projYears, projModalidades, projNiveles, projPeriodos,
     projCentros, projPeriodicidades, projNivelesFormacion, projSedes, projFacultades,
     base.modalidades.length]);
   
@@ -376,9 +379,9 @@ const loadPareto = async () => {
 };
 
   const buildPareto = (data: any[]) => {
+  const buildForNivel = (rows: any[]) => {
     const map: Record<string, number> = {};
-
-    data.forEach(d => {
+    rows.forEach(d => {
       const programa = d.programa || d.programaAcademico || d.nombrePrograma || "Sin nombre";
       const valor = d.nuevos ?? d.estudiantes ?? d.total ?? 0;
       if (!programa || valor === 0) return;
@@ -386,17 +389,12 @@ const loadPareto = async () => {
     });
 
     const arr = Object.entries(map).map(([programa, valor]) => ({
-      programa,
-      valor,
-      acumulado: 0,
-      porcentaje: 0,
+      programa, valor, acumulado: 0, porcentaje: 0,
     }));
-
     arr.sort((a, b) => b.valor - a.valor);
 
     const total = arr.reduce((acc, cur) => acc + cur.valor, 0);
     let acumulado = 0;
-
     arr.forEach(item => {
       acumulado += item.valor;
       item.acumulado = acumulado;
@@ -405,19 +403,26 @@ const loadPareto = async () => {
 
     const top80: typeof arr = [];
     const rest20: typeof arr = [];
-
     for (const item of arr) {
-      if (top80.length === 0 || top80[top80.length - 1].porcentaje < 80) {
-        top80.push(item);
-      } else {
-        rest20.push(item);
-      }
+      if (top80.length === 0 || top80[top80.length - 1].porcentaje < 80) top80.push(item);
+      else rest20.push(item);
     }
 
-    setParetoData(arr);
-    setPareto80(top80);
-    setPareto20(rest20);
+    return { all: arr, top80, rest20 };
   };
+
+  const pregradoRows = data.filter(d => normalizeNivel(d.nivelAcademico) === "Pregrado");
+  const posgradoRows = data.filter(d => normalizeNivel(d.nivelAcademico) === "Posgrado");
+
+  const pregrado = buildForNivel(pregradoRows);
+  const posgrado = buildForNivel(posgradoRows);
+
+  // Combinar para la gráfica (mantén el comportamiento actual)
+  const allCombined = buildForNivel(data);
+  setParetoData(allCombined.all);
+  setPareto80({ pregrado: pregrado.top80, posgrado: posgrado.top80 });
+  setPareto20({ pregrado: pregrado.rest20, posgrado: posgrado.rest20 });
+};
 
   // ==================== DASHBOARD ====================
 
@@ -809,6 +814,7 @@ const clearExec = () => {
 };
 
 const clearProj = () => {
+  setProjYears([]); 
   setProjModalidades([]);
   setProjNiveles([]);
   setProjPeriodos([]);
@@ -1030,6 +1036,7 @@ const clearProj = () => {
                         pareto80={pareto80}
                         pareto20={pareto20}
                         dataChart={dataChart}
+                        selYears={projYears}                setSelYears={setProjYears}
                         selModalidades={projModalidades}      setSelModalidades={setProjModalidades}
                         selNiveles={projNiveles}              setSelNiveles={setProjNiveles}
                         selNivelFormacion={projNivelesFormacion} setSelNivelFormacion={setProjNivelesFormacion}
@@ -1087,79 +1094,7 @@ const clearProj = () => {
 
                           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
-                            <div className="flex flex-col gap-3">
-
-                              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                                <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
-                                  Programas que contienen el 80% de los estudiantes
-                                </div>
-                                <div className="overflow-y-auto max-h-56">
-                                  <table className="w-full text-xs">
-                                    <thead className="bg-slate-50 sticky top-0">
-                                      <tr>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa Académico</th>
-                                        <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {pareto80.map((p, i) => (
-                                        <tr key={i} className="border-t border-slate-100">
-                                          <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                                          <td className="px-2 py-1 text-slate-700">{p.programa}</td>
-                                          <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
-                                        <td className="px-2 py-1.5" />
-                                        <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
-                                        <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
-                                          {pareto80.reduce((a, b) => a + b.valor, 0)}
-                                        </td>
-                                      </tr>
-                                    </tfoot>
-                                  </table>
-                                </div>
-                              </div>
-
-                              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                                <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
-                                  Programas que contienen el 20% de los estudiantes
-                                </div>
-                                <div className="overflow-y-auto max-h-56">
-                                  <table className="w-full text-xs">
-                                    <thead className="bg-slate-50 sticky top-0">
-                                      <tr>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
-                                        <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa Académico</th>
-                                        <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {pareto20.map((p, i) => (
-                                        <tr key={i} className="border-t border-slate-100">
-                                          <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                                          <td className="px-2 py-1 text-slate-700">{p.programa}</td>
-                                          <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
-                                        <td className="px-2 py-1.5" />
-                                        <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
-                                        <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
-                                          {pareto20.reduce((a, b) => a + b.valor, 0)}
-                                        </td>
-                                      </tr>
-                                    </tfoot>
-                                  </table>
-                                </div>
-                              </div>
-
-                            </div>
+                          <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
 
                             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                               <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
