@@ -18,7 +18,7 @@ import ColaboradoresView from "./components/ColaboradoresView";
 import ComparativosView from "./components/ComparativosView";
 import { OfertaView } from "./components/OfertaView";
 import { InvestigacionView } from "./components/InvestigacionView";
-import { ParetoTablas } from "./ParetoTablas";
+import { ParetoTablas } from "./components/ParetoTablas";
 
 
 const API_URL =
@@ -1047,7 +1047,6 @@ const clearProj = () => {
                         selSedes={projSedes}                  setSelSedes={setProjSedes}
                         selFacultades={projFacultades}        setSelFacultades={setProjFacultades}
                         selProgramas={[]}  setSelProgramas={() => {}}
-                        selYears={[]}      setSelYears={() => {}}
                         clearAll={clearProj}
                         onVolver={() => setSubViewEstudiantes("dashboard")}
                         onIrEjecutado={() => setSubViewPareto("ejecutado")}
