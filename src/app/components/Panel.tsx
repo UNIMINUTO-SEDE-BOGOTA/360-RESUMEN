@@ -1,15 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function Panel({
   title,
   children,
-  defaultOpen = true,
 }: {
   title: string;
   children: React.ReactNode;
-  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   return (
     <div
@@ -18,13 +26,11 @@ export function Panel({
         borderRadius: 6,
         display: "flex",
         flexDirection: "column",
-        minHeight: 0,
-        height: open ? "100%" : "auto",
       }}
     >
-      {/* Header clicable */}
+      {/* Header SOLO clicable en móvil */}
       <div
-        onClick={() => setOpen(!open)}
+        onClick={() => isMobile && setOpen(!open)}
         style={{
           backgroundColor: "#1a3a6b",
           color: "#fff",
@@ -32,17 +38,29 @@ export function Panel({
           fontWeight: 700,
           padding: "6px",
           textAlign: "center",
-          cursor: "pointer",
+          cursor: isMobile ? "pointer" : "default",
+          userSelect: "none",
           display: "flex",
           justifyContent: "center",
           gap: 6,
         }}
       >
         <span>{title}</span>
-        <span style={{ fontSize: 9 }}>{open ? "▲" : "▼"}</span>
+
+        {/* Flecha solo en móvil */}
+        {isMobile && (
+          <span style={{ fontSize: 9 }}>
+            {open ? "▲" : "▼"}
+          </span>
+        )}
       </div>
 
-      {open && <div style={{ flex: 1 }}>{children}</div>}
+      {/* En PC SIEMPRE visible */}
+      {(!isMobile || open) && (
+        <div style={{ flex: 1, minHeight: isMobile ? 200 : "auto" }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
