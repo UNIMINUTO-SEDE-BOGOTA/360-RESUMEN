@@ -115,10 +115,11 @@ export function ParetoProyectado({
       {/* FILTROS */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
 <FiltersMulti
-  years={[]}
+  years={base.years.map(y => ({ label: y, value: y }))}
   showYears={true}
   showProgramas={false}
-
+  selYears={selYears}
+  setSelYears={setSelYears}
   centros={base.centros.map(c => ({ label: c, value: c }))}
   modalidades={base.modalidades.map(m => ({ label: m, value: m }))}
   niveles={base.niveles.map(n => ({ label: n, value: n }))}
@@ -143,20 +144,21 @@ export function ParetoProyectado({
 />
       </div>
 
-      {/* CONTENIDO */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
+<div className="flex flex-col gap-3">
 
-      {/* COLUMNA IZQUIERDA */}
-      <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
+  {/* TABLAS — dos columnas pregrado/posgrado en pantallas grandes */}
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+    <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
+  </div>
 
-        {/* GRÁFICA */}
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <div className="bg-slate-600 text-white text-xs px-3 py-2 font-medium">
-            Pareto de programas en relación a estudiantes nuevos
-          </div>
-           <div className="p-2 overflow-x-auto">
-             <div style={{ minWidth: "520px" }}>
-               <ResponsiveContainer width="100%" height={420}>
+  {/* GRÁFICA — ancho completo */}
+  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div className="bg-slate-600 text-white text-xs px-3 py-2 font-medium">
+      Pareto de programas en relación a estudiantes nuevos
+    </div>
+    <div className="p-2 overflow-x-auto">
+      <div style={{ minWidth: "520px" }}>
+        <ResponsiveContainer width="100%" height={420}>
               <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
 
