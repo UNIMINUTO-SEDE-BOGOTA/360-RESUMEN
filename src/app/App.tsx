@@ -19,6 +19,7 @@ import ComparativosView from "./components/ComparativosView";
 import { OfertaView } from "./components/OfertaView";
 import { InvestigacionView } from "./components/InvestigacionView";
 import { ParetoTablas } from "./components/ParetoTablas";
+import { GraficaPareto } from "./components/GraficaPareto";
 
 
 const API_URL =
@@ -212,6 +213,9 @@ function App() {
   const [highlightBar, setHighlightBar] = useState(false);
   const [highlightLine, setHighlightLine] = useState(false);
 
+  const [dataChartPregrado, setDataChartPregrado] = useState<any[]>([]);
+  const [dataChartPosgrado, setDataChartPosgrado] = useState<any[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const reqId = useRef(0);
@@ -378,7 +382,7 @@ const loadPareto = async () => {
   buildPareto(res.rows);
 };
 
-  const buildPareto = (data: any[]) => {
+const buildPareto = (data: any[]) => {
   const buildForNivel = (rows: any[]) => {
     const map: Record<string, number> = {};
     rows.forEach(d => {
@@ -417,11 +421,21 @@ const loadPareto = async () => {
   const pregrado = buildForNivel(pregradoRows);
   const posgrado = buildForNivel(posgradoRows);
 
-  // Combinar para la gráfica (mantén el comportamiento actual)
-  const allCombined = buildForNivel(data);
-  setParetoData(allCombined.all);
   setPareto80({ pregrado: pregrado.top80, posgrado: posgrado.top80 });
   setPareto20({ pregrado: pregrado.rest20, posgrado: posgrado.rest20 });
+
+  // ← dataChart separados por nivel
+  setDataChartPregrado(pregrado.all.map(p => ({
+    ...p,
+    fill: p.porcentaje <= 80 ? "#22c55e" : "#93c5fd"
+  })));
+  setDataChartPosgrado(posgrado.all.map(p => ({
+    ...p,
+    fill: p.porcentaje <= 80 ? "#a855f7" : "#c4b5fd"  // morado para posgrado
+  })));
+
+  // Combinado ya no es necesario, pero si lo usas en otro lado:
+  setParetoData([...pregrado.all, ...posgrado.all]);
 };
 
   // ==================== DASHBOARD ====================
@@ -1047,6 +1061,8 @@ const clearProj = () => {
                         selSedes={projSedes}                  setSelSedes={setProjSedes}
                         selFacultades={projFacultades}        setSelFacultades={setProjFacultades}
                         selProgramas={[]}  setSelProgramas={() => {}}
+                        dataChartPregrado={dataChartPregrado}        
+                        dataChartPosgrado={dataChartPosgrado}
                         clearAll={clearProj}
                         onVolver={() => setSubViewEstudiantes("dashboard")}
                         onIrEjecutado={() => setSubViewPareto("ejecutado")}
@@ -1087,6 +1103,8 @@ const clearProj = () => {
                                   selModalidades={execModalidades} setSelModalidades={setExecModalidades}
                                   selPeriodos={execPeriodos}      setSelPeriodos={setExecPeriodos}
                                   selCentros={execCentros}        setSelCentros={setExecCentros}
+                                  dataChartPregrado={dataChartPregrado}
+                                  dataChartPosgrado={dataChartPosgrado}
                                   clearAll={clearExec}
                                 />
                           </div>
@@ -1096,84 +1114,18 @@ const clearProj = () => {
                           <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
 
                             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                              <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
-                                Pareto de programas en relación a estudiantes nuevos
+                              <div className="flex flex-col gap-3">
+                                <GraficaPareto
+                                  titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
+                                  colorHeader="bg-slate-700"
+                                  data={dataChartPregrado}
+                                />
+                                <GraficaPareto
+                                  titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
+                                  colorHeader="bg-purple-700"
+                                  data={dataChartPosgrado}
+                                />
                               </div>
-                              <div className="p-2 overflow-x-auto">
-                                <div style={{ minWidth: "520px" }}>
-                                  <ResponsiveContainer width="100%" height={420}>
-                                    <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
-                                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                      <XAxis
-                                        dataKey="programa"
-                                        tick={{ fontSize: 9 }}
-                                        interval={0}
-                                        angle={-45}
-                                        textAnchor="end"
-                                        height={90}
-                                      />
-                                      <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                                      <YAxis
-                                        yAxisId="right"
-                                        orientation="right"
-                                        domain={[0, 100]}
-                                        tick={{ fontSize: 10 }}
-                                        tickFormatter={(v) => `${v}%`}
-                                      />
-                                      <Legend
-                                        verticalAlign="top"
-                                        align="left"
-                                        wrapperStyle={{ fontSize: 11, paddingBottom: 4, cursor: "pointer" }}
-                                        formatter={(value) => {
-                                          if (value === "porcentaje") return "Pareto Nuevos";
-                                          if (value === "valor") return "Estudiantes Nuevos";
-                                          return value;
-                                        }}
-                                        onClick={(e) => {
-                                          if (e.dataKey === "porcentaje") setHighlightLine(prev => !prev);
-                                          else setHighlightBar(prev => !prev);
-                                        }}
-                                      />
-                                      <Tooltip
-                                        formatter={(value, name) => {
-                                          if (name === "valor") return [`${Number(value).toLocaleString()}`, "Estudiantes Nuevos"];
-                                          if (name === "porcentaje") return [`${Number(value).toFixed(2)}%`, "Pareto Nuevos"];
-                                          return [value, name];
-                                        }}
-                                      />
-                                      <Bar yAxisId="left" dataKey="valor" name="Estudiantes Nuevos">
-                                        {dataChart.map((entry, index) => {
-                                          const baseColor = entry.fill;
-                                          const darkColor = baseColor === "#22c55e" ? "#15803d" : "#2563eb";
-                                          return (
-                                            <Cell
-                                              key={index}
-                                              fill={highlightBar ? darkColor : baseColor}
-                                              opacity={highlightBar ? 1 : 0.85}
-                                            />
-                                          );
-                                        })}
-                                      </Bar>
-                                      <Line
-                                        yAxisId="right"
-                                        type="monotone"
-                                        dataKey="porcentaje"
-                                        name="Pareto Nuevos"
-                                        stroke={highlightLine ? "#1e3a8a" : "#1d4ed8"}
-                                        strokeWidth={highlightLine ? 3.5 : 2}
-                                        dot={{ r: highlightLine ? 3.5 : 2, fill: highlightLine ? "#1e3a8a" : "#1d4ed8" }}
-                                        label={{
-                                          position: "top",
-                                          fontSize: 8,
-                                          fill: highlightLine ? "#1e3a8a" : "#1d4ed8",
-                                          formatter: (v: number) => `${v.toFixed(1)}%`,
-                                        }}
-                                      />
-                                    </ComposedChart>
-                                  </ResponsiveContainer>
-                                </div>
-                              </div>
-                            </div>
 
                           </div>
                         </div>
