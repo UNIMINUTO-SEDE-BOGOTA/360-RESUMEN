@@ -237,8 +237,11 @@ await Promise.all(years.map(async (year) => {
 }));
 
     // ── 3. Colaboradores ────────────────────────────────────────────────────
-try {
-      const r = await pool.request().query(`
+for (const periodo of ['2025-1', '2026-1']) {
+  try {
+    const r = await pool.request()
+      .input('periodo', sql.NVarChar, periodo)
+      .query(`
         SELECT
           [Modalidad]                          AS modalidad,
           [Género]                             AS genero,
@@ -252,16 +255,17 @@ try {
           [Periodo]                            AS periodo,
           [Rectoría]                           AS rectoria
         FROM Colaboradores
-WHERE LOWER(LTRIM(RTRIM(
-  REPLACE(REPLACE(REPLACE(REPLACE(
-    CONVERT(NVARCHAR(200), [Rectoría] COLLATE Latin1_General_CI_AI),
-  'á','a'),'é','e'),'í','i'),'ó','o')
-))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
-AND [Periodo] = '2026-1'
+        WHERE LOWER(LTRIM(RTRIM(
+          REPLACE(REPLACE(REPLACE(REPLACE(
+            CONVERT(NVARCHAR(200), [Rectoría] COLLATE Latin1_General_CI_AI),
+          'á','a'),'é','e'),'í','i'),'ó','o')
+        ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
+        AND [Periodo] = @periodo
       `);
-      await setCache('colaboradores:all', r.recordset);
-      console.log(`✅ colaboradores:all → ${r.recordset.length}`);
-    } catch (e) { console.warn('⚠️ Error colaboradores:', e.message); }
+    await setCache(`colaboradores:${periodo}`, r.recordset);
+    console.log(`✅ colaboradores:${periodo} → ${r.recordset.length}`);
+  } catch (e) { console.warn(`⚠️ Error colaboradores ${periodo}:`, e.message); }
+}
 
 
     // ── 4. Oferta activa ────────────────────────────────────────────────────
@@ -431,10 +435,11 @@ app.get('/api/tablas/:nombre/estructura', async (req, res) => {
 });
 
 // ── Colaboradores: SOLO desde cache ──────────────────────────────────────────
-app.get('/api/colaboradores', async (_req, res) => {
-  const cached = await getCache('colaboradores:all');
+app.get('/api/colaboradores', async (req, res) => {
+  const periodo = req.query.periodo || '2026-1';
+  const cached = await getCache(`colaboradores:${periodo}`);
   if (cached) return res.json(cached);
-  return sendCacheOnly(res, 'colaboradores:all');
+  return sendCacheOnly(res, `colaboradores:${periodo}`);
 });
 
 // ── Comparativos: SOLO desde cache ───────────────────────────────────────────
