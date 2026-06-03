@@ -860,7 +860,7 @@ const clearProj = () => {
           />
           <div className="leading-tight truncate">
             <h1 className="text-xs sm:text-sm font-bold text-gray-800">360 Resumen</h1>
-            <p className="text-[9px] sm:text-[10px] text-gray-500">UNIMINUTO • 2020–2026</p>
+            <p className="text-[9px] sm:text-[10px] text-gray-500">UNIMINUTO • 2026</p>
           </div>
         </div>
 
