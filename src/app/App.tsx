@@ -189,7 +189,7 @@ function App() {
   const [execProgramas, setExecProgramas] = useState<string[]>([]);
   
   // PARETO PROYECTADO
-  const [projYears, setProjYears] = useState<string[]>([]);
+  const [projYears, setProjYears] = useState<string[]>(["2026"]);
   const [projModalidades, setProjModalidades] = useState<string[]>([]);
   const [projNiveles, setProjNiveles] = useState<string[]>([]);
   const [projPeriodos, setProjPeriodos] = useState<string[]>([]);
@@ -828,7 +828,7 @@ const clearExec = () => {
 };
 
 const clearProj = () => {
-  setProjYears([]); 
+  setProjYears(["2026"]);
   setProjModalidades([]);
   setProjNiveles([]);
   setProjPeriodos([]);
@@ -1110,25 +1110,26 @@ const clearProj = () => {
 
                           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
-                          <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
-
-                            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                              <div className="flex flex-col gap-3">
-                                <GraficaPareto
-                                  titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
-                                  colorHeader="bg-slate-700"
-                                  data={dataChartPregrado}
-                                />
-                                <GraficaPareto
-                                  titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
-                                  colorHeader="bg-purple-700"
-                                  data={dataChartPosgrado}
-                                />
-                              </div>
-
+                          <div className="order-1 lg:order-1">
+                            <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
+                          </div>
+                        
+                          <div className="order-2 lg:order-2 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <div className="flex flex-col gap-3">
+                              <GraficaPareto
+                                titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
+                                colorHeader="bg-slate-700"
+                                data={dataChartPregrado}
+                              />
+                              <GraficaPareto
+                                titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
+                                colorHeader="bg-purple-700"
+                                data={dataChartPosgrado}
+                              />
+                            </div>
                           </div>
                         </div>
-                          </div>
+                      </div>
                       )}
                     </>
                   )}
