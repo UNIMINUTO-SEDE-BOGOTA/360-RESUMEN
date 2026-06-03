@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { FiltersMulti } from "./FiltersMulti";
 import { ParetoTablas } from "./ParetoTablas";
+import { GraficaPareto } from "./GraficaPareto";
 
 
 interface Props {
@@ -33,7 +34,8 @@ interface Props {
   listaProgramas: { label: string; value: string }[];
   pareto80: { pregrado: ParetoItem[]; posgrado: ParetoItem[] };
   pareto20: { pregrado: ParetoItem[]; posgrado: ParetoItem[] };
-  dataChart: any[];
+  dataChartPregrado: any[];
+  dataChartPosgrado: any[];
   // filtros
   selYears: string[]; setSelYears: (v: string[]) => void;
   selModalidades: string[]; setSelModalidades: (v: string[]) => void;
@@ -59,8 +61,9 @@ interface Props {
 
 export function ParetoProyectado({
   fechaCorte, base, listaProgramas,
-  pareto80, pareto20, dataChart,
-
+  pareto80, pareto20,
+  dataChartPregrado,
+  dataChartPosgrado,
   selYears, setSelYears,
   selModalidades, setSelModalidades,
   selNivelFormacion, setSelNivelFormacion,
@@ -152,91 +155,18 @@ export function ParetoProyectado({
   </div>
 
   {/* GRÁFICA — ancho completo */}
-  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-    <div className="bg-slate-600 text-white text-xs px-3 py-2 font-medium">
-      Pareto de programas en relación a estudiantes nuevos
-    </div>
-    <div className="p-2 overflow-x-auto">
-      <div style={{ minWidth: "520px" }}>
-        <ResponsiveContainer width="100%" height={420}>
-              <ComposedChart data={dataChart} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-
-                <XAxis
-                  dataKey="programa"
-                  tick={{ fontSize: 9 }}
-                  interval={0}
-                  angle={-45}
-                  textAnchor="end"
-                  height={90}
-                />
-
-                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  domain={[0, 100]}
-                  tick={{ fontSize: 10 }}
-                  tickFormatter={(v) => `${v}%`}
-                />
-
-                <Legend
-                  verticalAlign="top"
-                  align="left"
-                  wrapperStyle={{ fontSize: 11, paddingBottom: 4, cursor: "pointer" }}
-                  formatter={(value) => {
-                    if (value === "porcentaje") return "Pareto Nuevos";
-                    if (value === "valor") return "Estudiantes Nuevos";
-                    return value;
-                  }}
-                  onClick={(e) => {
-                    if (e.dataKey === "porcentaje") setHighlightLine(prev => !prev);
-                    else setHighlightBar(prev => !prev);
-                  }}
-                />
-
-                <Tooltip
-                  formatter={(value, name) => {
-                    if (name === "valor") return [`${Number(value).toLocaleString()}`, "Estudiantes Nuevos"];
-                    if (name === "porcentaje") return [`${Number(value).toFixed(2)}%`, "Pareto Nuevos"];
-                    return [value, name];
-                  }}
-                />
-
-                <Bar yAxisId="left" dataKey="valor" name="valor">
-                  {dataChart.map((entry, index) => {
-                    const baseColor = entry.fill;
-                    const darkColor = baseColor === "#22c55e" ? "#15803d" : "#2563eb";
-                    return (
-                      <Cell
-                        key={index}
-                        fill={highlightBar ? darkColor : baseColor}
-                        opacity={highlightBar ? 1 : 0.85}
-                      />
-                    );
-                  })}
-                </Bar>
-
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="porcentaje"
-                  name="porcentaje"
-                  stroke={highlightLine ? "#1e3a8a" : "#1d4ed8"}
-                  strokeWidth={highlightLine ? 3.5 : 2}
-                  dot={{ r: highlightLine ? 3.5 : 2, fill: highlightLine ? "#1e3a8a" : "#1d4ed8" }}
-                  label={{
-                    position: "top",
-                    fontSize: 8,
-                    fill: highlightLine ? "#1e3a8a" : "#1d4ed8",
-                    formatter: (v: number) => `${v.toFixed(1)}%`,
-                  }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-              </div>
-        </div>
+  <<div className="flex flex-col gap-3">
+  <GraficaPareto
+    titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
+    colorHeader="bg-slate-700"
+    data={dataChartPregrado}
+  />
+  <GraficaPareto
+    titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
+    colorHeader="bg-purple-700"
+    data={dataChartPosgrado}
+  />
+</div>
 
       </div>
     </div>
