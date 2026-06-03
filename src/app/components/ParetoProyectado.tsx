@@ -5,6 +5,7 @@ import {
   ResponsiveContainer, Cell, ReferenceLine, Legend
 } from "recharts";
 import { FiltersMulti } from "./FiltersMulti";
+import { ParetoTablas } from "./ParetoTablas";
 
 
 interface Props {
@@ -30,8 +31,8 @@ interface Props {
   setSelFacultades: (v: string[]) => void;
 
   listaProgramas: { label: string; value: string }[];
-  pareto80: any[];
-  pareto20: any[];
+  pareto80: { pregrado: ParetoItem[]; posgrado: ParetoItem[] };
+  pareto20: { pregrado: ParetoItem[]; posgrado: ParetoItem[] };
   dataChart: any[];
   // filtros
   selYears: string[]; setSelYears: (v: string[]) => void;
@@ -115,7 +116,7 @@ export function ParetoProyectado({
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
 <FiltersMulti
   years={[]}
-  showYears={false}
+  showYears={true}
   showProgramas={false}
 
   centros={base.centros.map(c => ({ label: c, value: c }))}
@@ -145,82 +146,8 @@ export function ParetoProyectado({
       {/* CONTENIDO */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
-        {/* COLUMNA IZQUIERDA */}
-        <div className="flex flex-col gap-3">
-
-          {/* TABLA 80% */}
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-            <div className="bg-slate-700 text-white text-xs px-3 py-2 font-medium">
-              Programas que contienen el 80% de los estudiantes nuevos
-            </div>
-            <div className="overflow-y-auto max-h-56">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-50 sticky top-0">
-                  <tr>
-                    <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
-                    <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa académico</th>
-                    <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pareto80.map((p, i) => (
-                    <tr key={i} className="border-t border-slate-100">
-                      <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                      <td className="px-2 py-1 text-slate-700">{p.programa}</td>
-                      <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
-                    <td className="px-2 py-1.5" />
-                    <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
-                    <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
-                      {pareto80.reduce((a, b) => a + b.valor, 0)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
-          {/* TABLA 20% */}
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-            <div className="bg-slate-600 text-white text-xs px-3 py-2 font-medium">
-              Programas que contienen el 20% de los estudiantes nuevos
-            </div>
-            <div className="overflow-y-auto max-h-52">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-50 sticky top-0">
-                  <tr>
-                    <th className="px-2 py-1.5 text-left text-slate-500 font-medium w-8">No.</th>
-                    <th className="px-2 py-1.5 text-left text-slate-500 font-medium">Programa Académico</th>
-                    <th className="px-2 py-1.5 text-right text-slate-500 font-medium">Est.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pareto20.map((p, i) => (
-                    <tr key={i} className="border-t border-slate-100">
-                      <td className="px-2 py-1 text-slate-400">{i + 1}</td>
-                      <td className="px-2 py-1 text-slate-700">{p.programa}</td>
-                      <td className="px-2 py-1 text-right text-slate-700">{p.valor}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-slate-200 bg-slate-50 sticky bottom-0">
-                    <td className="px-2 py-1.5" />
-                    <td className="px-2 py-1.5 font-semibold text-slate-700">Total</td>
-                    <td className="px-2 py-1.5 text-right font-semibold text-slate-700">
-                      {pareto20.reduce((a, b) => a + b.valor, 0)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
-        </div>
+      {/* COLUMNA IZQUIERDA */}
+      <ParetoTablas pareto80={pareto80} pareto20={pareto20} />
 
         {/* GRÁFICA */}
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
