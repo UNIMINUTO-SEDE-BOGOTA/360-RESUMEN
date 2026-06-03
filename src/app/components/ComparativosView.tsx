@@ -226,16 +226,15 @@ export default function ComparativosView() {
   });
 }, [compRows, selModalidades, selNiveles, selPeriodos]);
 
-  const rows25 = useMemo(
-    () => filteredRows.filter((r) => r.Año === 2025 && (r.Periodo === "S1" || r.Periodo === "Q2")),
-    [filteredRows]
-  );
-  
-  const rows26 = useMemo(
-    () => filteredRows.filter((r) => r.Año === 2026 && (r.Periodo === "S1" || r.Periodo === "Q2")),
-    [filteredRows]
-  );
+const rows25 = useMemo(
+  () => filteredRows.filter((r) => r.Año === 2025),
+  [filteredRows]
+);
 
+const rows26 = useMemo(
+  () => filteredRows.filter((r) => r.Año === 2026),
+  [filteredRows]
+);
   // ── KPIs ───────────────────────────────────
   const totalColab26 = useMemo(
     () => colab26.reduce((s, r) => s + (r.total || 0), 0),
