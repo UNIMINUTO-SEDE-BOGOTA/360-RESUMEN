@@ -309,26 +309,23 @@ for (const periodo of ['2025-1', '2026-1']) {
 
     // ── 5. Comparativos ─────────────────────────────────────────────────────
     try {
-      const filtroPeriodo = `
-        (CASE
-          WHEN REPLACE(UPPER(CONVERT(NVARCHAR(30), [Periodo])), ' ', '') LIKE 'S1%' THEN 'S1'
-          WHEN REPLACE(UPPER(CONVERT(NVARCHAR(30), [Periodo])), ' ', '') LIKE 'Q1%' THEN 'Q1'
-          WHEN REPLACE(UPPER(CONVERT(NVARCHAR(30), [Periodo])), ' ', '') LIKE '%-1' THEN 'S1'
-          ELSE ''
-        END) IN ('S1','Q1')
-      `;
-      const r = await pool.request().query(`
-        SELECT [Año], [Modalidad], [Nivel Académico], [Nivel de Formación],
-               SUM([Estudiantes Totales]) AS total
-        FROM [Poblacion_Estudiantil]
-        WHERE ${buildRectoriaFilter()}
-          AND [Año] IN (2025, 2026)
-          AND ${filtroPeriodo}
-        GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación]
-      `);
-      await setCache('comparativos:all', r.recordset);
-      console.log(`✅ comparativos:all → ${r.recordset.length}`);
-    } catch (e) { console.warn('⚠️ Error comparativos:', e.message); }
+  const r = await pool.request().query(`
+    SELECT
+      [Año],
+      [Modalidad],
+      [Nivel Académico],
+      [Nivel de Formación],
+      [Periodo],
+      SUM([Estudiantes Totales]) AS total
+    FROM [Poblacion_Estudiantil]
+    WHERE ${buildRectoriaFilter()}
+      AND [Año] IN (2025, 2026)
+      AND UPPER(LTRIM(RTRIM(CONVERT(NVARCHAR(30), [Periodo])))) IN ('S1', 'Q2')
+    GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación], [Periodo]
+  `);
+  await setCache('comparativos:all', r.recordset);
+  console.log(`✅ comparativos:all → ${r.recordset.length}`);
+} catch (e) { console.warn('⚠️ Error comparativos:', e.message); }
 
     // ── 6. Tablas disponibles ────────────────────────────────────────────────
     try {
