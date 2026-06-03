@@ -1049,7 +1049,6 @@ const clearProj = () => {
                         listaProgramas={listaProgramas}
                         pareto80={pareto80}
                         pareto20={pareto20}
-                        dataChart={dataChart}
                         selYears={projYears}                setSelYears={setProjYears}
                         selModalidades={projModalidades}      setSelModalidades={setProjModalidades}
                         selNiveles={projNiveles}              setSelNiveles={setProjNiveles}
@@ -1129,6 +1128,7 @@ const clearProj = () => {
 
                           </div>
                         </div>
+                          </div>
                       )}
                     </>
                   )}
