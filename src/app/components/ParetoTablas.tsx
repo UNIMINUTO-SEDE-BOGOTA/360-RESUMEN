@@ -46,46 +46,53 @@ function TablaPareto({ titulo, datos, color }: {
 }
 
 export function ParetoTablas({ pareto80, pareto20 }: Props) {
+  const tienePregrado = pareto80.pregrado.length > 0 || pareto20.pregrado.length > 0;
+  const tienePosgrado = pareto80.posgrado.length > 0 || pareto20.posgrado.length > 0;
+
   return (
     <div className="flex flex-col gap-3">
 
       {/* PREGRADO */}
-      <div className="border border-blue-100 rounded-lg p-2 bg-blue-50/30">
-        <p className="text-[11px] font-semibold text-blue-700 mb-2 uppercase tracking-wide">
-          Pregrado
-        </p>
-        <div className="flex flex-col gap-2">
-          <TablaPareto
-            titulo="Programas con el 80% de estudiantes nuevos"
-            datos={pareto80.pregrado}
-            color="bg-slate-700"
-          />
-          <TablaPareto
-            titulo="Programas con el 20% de estudiantes nuevos"
-            datos={pareto20.pregrado}
-            color="bg-slate-600"
-          />
+      {tienePregrado && (
+        <div className="border border-blue-100 rounded-lg p-2 bg-blue-50/30">
+          <p className="text-[11px] font-semibold text-blue-700 mb-2 uppercase tracking-wide">
+            Pregrado
+          </p>
+          <div className="flex flex-col gap-2">
+            <TablaPareto
+              titulo="Programas con el 80% de estudiantes nuevos"
+              datos={pareto80.pregrado}
+              color="bg-slate-700"
+            />
+            <TablaPareto
+              titulo="Programas con el 20% de estudiantes nuevos"
+              datos={pareto20.pregrado}
+              color="bg-slate-600"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* POSGRADO */}
-      <div className="border border-purple-100 rounded-lg p-2 bg-purple-50/30">
-        <p className="text-[11px] font-semibold text-purple-700 mb-2 uppercase tracking-wide">
-          Posgrado
-        </p>
-        <div className="flex flex-col gap-2">
-          <TablaPareto
-            titulo="Programas con el 80% de estudiantes nuevos"
-            datos={pareto80.posgrado}
-            color="bg-purple-700"
-          />
-          <TablaPareto
-            titulo="Programas con el 20% de estudiantes nuevos"
-            datos={pareto20.posgrado}
-            color="bg-purple-600"
-          />
+      {tienePosgrado && (
+        <div className="border border-purple-100 rounded-lg p-2 bg-purple-50/30">
+          <p className="text-[11px] font-semibold text-purple-700 mb-2 uppercase tracking-wide">
+            Posgrado
+          </p>
+          <div className="flex flex-col gap-2">
+            <TablaPareto
+              titulo="Programas con el 80% de estudiantes nuevos"
+              datos={pareto80.posgrado}
+              color="bg-purple-700"
+            />
+            <TablaPareto
+              titulo="Programas con el 20% de estudiantes nuevos"
+              datos={pareto20.posgrado}
+              color="bg-purple-600"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );
