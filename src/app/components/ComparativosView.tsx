@@ -48,6 +48,7 @@ interface CompRow {
   Modalidad: string;
   "Nivel Académico": string;
   "Nivel de Formación": string;
+  "Centro Universitario": string;  
   total: number;
 }
 
@@ -157,7 +158,7 @@ export default function ComparativosView() {
   const [colab26, setColab26] = useState<ColabRow[]>([]);
   const [ofertaRows, setOfertaRows] = useState<OfertaRow[]>([]); // ✅ DENTRO del componente
   const [loading, setLoading] = useState(true);
-
+  const [selCentros, setSelCentros] = useState<string[]>([]);
   const [selModalidades, setSelModalidades] = useState<string[]>([]);
   const [selNiveles, setSelNiveles] = useState<string[]>([]);
   const [selPeriodos, setSelPeriodos] = useState<string[]>([]);
@@ -209,6 +210,10 @@ export default function ComparativosView() {
     () => [...new Set(compRows.map((r) => r.Modalidad).filter(Boolean))].sort(),
     [compRows]
   );
+  const centroOpts = useMemo(
+  () => [...new Set(compRows.map((r) => r["Centro Universitario"]).filter(Boolean))].sort(),
+  [compRows]
+);
   const nivelOpts = useMemo(
     () => [...new Set(compRows.map((r) => r["Nivel Académico"]).filter(Boolean))].sort(),
     [compRows]
@@ -223,6 +228,8 @@ export default function ComparativosView() {
     if (selModalidades.length > 0 && !selModalidades.includes(r.Modalidad)) return false;
     if (selNiveles.length > 0 && !selNiveles.includes(r["Nivel Académico"])) return false;
     if (selPeriodos.length > 0 && !selPeriodos.includes(`${r.Año}-${r.Periodo}`)) return false;
+      if (selCentros.length > 0 && !selCentros.includes(r["Centro Universitario"])) return false; // ← AGREGAR
+
     return true;
   });
 }, [compRows, selModalidades, selNiveles, selPeriodos]);
@@ -372,6 +379,8 @@ const ofertaAcademica = useMemo(() => {
     setSelModalidades([]);
     setSelNiveles([]);
     setSelPeriodos([]);
+    setSelCentros([]);
+    
   };
 
   // ── CLASES ─────────────────────────────────
@@ -516,7 +525,19 @@ const ofertaAcademica = useMemo(() => {
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : programasAcreditados}</div>
           </div>
 
+          <div className="border rounded-md bg-white p-2 flex flex-col gap-2">
+  <div className="text-[10px] font-bold text-slate-500 uppercase">Filtros</div>
+  <MultiCheckDropdown
+    label="Centro Universitario"
+    options={centroOpts}
+    selected={selCentros}
+    onChange={setSelCentros}
+  />
+          </div>
+
         </div>
+
+        
 
         {/* DERECHA */}
         <div className="flex flex-col gap-3 order-3">
