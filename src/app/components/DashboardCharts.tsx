@@ -1,5 +1,5 @@
 // src/components/DashboardCharts.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export interface DashboardChartsProps {
   stats: {
