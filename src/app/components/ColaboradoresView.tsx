@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList
 } from "recharts";
 import { DropdownMulti } from "./FiltersMulti";
-
+import { Panel } from "./Panel"; 
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ||
@@ -316,141 +316,132 @@ return (
       </div>
     </div>
 
-    {/* CONTENIDO */}
-    <div className="flex flex-col gap-3">
+{/* CONTENIDO */}
+<div className="flex flex-col gap-3">
 
-      {/* NIVEL + DEDICACIÓN */}
-      <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-3">
-        {/* NIVEL */}
-        <div className="bg-white border rounded-xl overflow-x-auto">
-          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-            Nivel de Formación
-          </div>
-          <div className="min-w-[420px]">
-            <table className="text-xs w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-2 py-1 text-left">Nivel</th>
-                  <th className="px-2 py-1 text-center">Completo</th>
-                  <th className="px-2 py-1 text-center">Medio</th>
-                  <th className="px-2 py-1 text-center">Parcial</th>
-                  <th className="px-2 py-1 text-center font-bold">Total</th>
-                </tr>
-                
-              </thead>
-                <tbody>
-                  {nivelTotals.map((r: any, i) => {
-                    const rowTotal =
-                      (r["1.Tiempo Completo"] || 0) +
-                      (r["2.Medio Tiempo"] || 0) +
-                      (r["3.Tiempo Parcial"] || 0);
-                    return (
-                      <tr key={i} className="border-t">
-                        <td className="px-2 py-1">{r.nivel}</td>
-                        <td className="px-2 py-1 text-center">{r["1.Tiempo Completo"] || ""}</td>
-                        <td className="px-2 py-1 text-center">{r["2.Medio Tiempo"] || ""}</td>
-                        <td className="px-2 py-1 text-center">{r["3.Tiempo Parcial"] || ""}</td>
-                        <td className="px-2 py-1 text-center font-bold">{rowTotal || ""}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-            </table>
-          </div>
-        </div>
+  {/* NIVEL + DEDICACIÓN */}
+  <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-3">
 
-        {/* DEDICACIÓN */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-            Colaboradores por dedicación
-          </div>
-          <div className="p-2 h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dedicacionData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="name" tick={{ fontSize: 8 }} />
-                <YAxis tick={{ fontSize: 8 }} />
-                <Tooltip />
-                <Legend />
-                {["1.Presencial","2.Distancia","Sin información"].map(k => (
-                  <Bar key={k} dataKey={k} stackId="a" fill={DEDICACION_COLORS[k]}>
-                    <LabelList
-                      dataKey={k}
-                      position="insideTop"
-                      style={{ fontSize: 9, fill: "#1e293b", fontWeight: 600 }}
-                      formatter={(v: number) => v > 0 ? v : ""}
-                    />
-                  </Bar>
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+    {/* NIVEL */}
+    <Panel title="Nivel de Formación" defaultOpen>
+      <div className="overflow-x-auto">
+        <div className="min-w-[420px]">
+          <table className="text-xs w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-2 py-1 text-left">Nivel</th>
+                <th className="px-2 py-1 text-center">Completo</th>
+                <th className="px-2 py-1 text-center">Medio</th>
+                <th className="px-2 py-1 text-center">Parcial</th>
+                <th className="px-2 py-1 text-center font-bold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nivelTotals.map((r: any, i) => {
+                const rowTotal =
+                  (r["1.Tiempo Completo"] || 0) +
+                  (r["2.Medio Tiempo"] || 0) +
+                  (r["3.Tiempo Parcial"] || 0);
+                return (
+                  <tr key={i} className="border-t">
+                    <td className="px-2 py-1">{r.nivel}</td>
+                    <td className="px-2 py-1 text-center">{r["1.Tiempo Completo"] || ""}</td>
+                    <td className="px-2 py-1 text-center">{r["2.Medio Tiempo"] || ""}</td>
+                    <td className="px-2 py-1 text-center">{r["3.Tiempo Parcial"] || ""}</td>
+                    <td className="px-2 py-1 text-center font-bold">{rowTotal || ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
+    </Panel>
 
-      {/* ESCALAFÓN + CONTRATO */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-
-        {/* ESCALAFÓN */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-            Escalafón docente
-          </div>
-          <div className="p-2 h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={escalafonData} margin={{ top: 35, right: 10, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="name" tick={{ fontSize: 8 }} />
-                <YAxis tick={{ fontSize: 8 }} />
-                <Tooltip />
-                <Bar dataKey="valor">
-                  {escalafonData.map((_, i) => (
-                    <Cell key={i} fill={ESCALAFON_COLORS[i % ESCALAFON_COLORS.length]} />
-                  ))}
-                  <LabelList dataKey="valor" position="top" offset={10} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* CONTRATO */}
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="bg-slate-700 text-white text-[11px] font-semibold text-center py-1.5">
-            Tipo de contrato
-          </div>
-          <div className="p-2 h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={contratoData}
-                  dataKey="value"
-                  outerRadius={60}
-                  label={({ pct, cx, cy, midAngle, outerRadius }) => {
-                    const RADIAN = Math.PI / 180;
-                    const radius = outerRadius + 20;
-                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                    return (
-                      <text x={x} y={y} fill="#334155" textAnchor="middle" dominantBaseline="central" fontSize={9}>
-                        {pct}
-                      </text>
-                    );
-                  }}
-                >
-                  {contratoData.map((_, i) => (
-                    <Cell key={i} fill={CONTRATO_COLORS[i % CONTRATO_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
+    {/* DEDICACIÓN */}
+    <Panel title="Colaboradores por dedicación" defaultOpen={false}>
+      <div className="p-2 h-52">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={dedicacionData}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+            <YAxis tick={{ fontSize: 8 }} />
+            <Tooltip />
+            <Legend />
+            {["1.Presencial","2.Distancia","Sin información"].map(k => (
+              <Bar key={k} dataKey={k} stackId="a" fill={DEDICACION_COLORS[k]}>
+                <LabelList
+                  dataKey={k}
+                  position="insideTop"
+                  style={{ fontSize: 9, fill: "#1e293b", fontWeight: 600 }}
+                  formatter={(v: number) => v > 0 ? v : ""}
+                />
+              </Bar>
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
       </div>
-    </div>
+    </Panel>
+
+  </div>
+
+  {/* ESCALAFÓN + CONTRATO */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+    {/* ESCALAFÓN */}
+    <Panel title="Escalafón docente" defaultOpen={false}>
+      <div className="p-2 h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={escalafonData} margin={{ top: 35, right: 10, left: 0, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+            <YAxis tick={{ fontSize: 8 }} />
+            <Tooltip />
+            <Bar dataKey="valor">
+              {escalafonData.map((_, i) => (
+                <Cell key={i} fill={ESCALAFON_COLORS[i % ESCALAFON_COLORS.length]} />
+              ))}
+              <LabelList dataKey="valor" position="top" offset={10} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Panel>
+
+    {/* CONTRATO */}
+    <Panel title="Tipo de contrato" defaultOpen={false}>
+      <div className="p-2 h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={contratoData}
+              dataKey="value"
+              outerRadius={60}
+              label={({ pct, cx, cy, midAngle, outerRadius }) => {
+                const RADIAN = Math.PI / 180;
+                const radius = outerRadius + 20;
+                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                return (
+                  <text x={x} y={y} fill="#334155" textAnchor="middle" dominantBaseline="central" fontSize={9}>
+                    {pct}
+                  </text>
+                );
+              }}
+            >
+              {contratoData.map((_, i) => (
+                <Cell key={i} fill={CONTRATO_COLORS[i % CONTRATO_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </Panel>
+
+  </div>
+</div>
   </div>
 );
 }
