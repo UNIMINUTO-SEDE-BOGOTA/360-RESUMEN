@@ -232,7 +232,7 @@ export default function ComparativosView() {
 
     return true;
   });
-}, [compRows, selModalidades, selNiveles, selPeriodos]);
+}, [compRows, selModalidades, selNiveles, selPeriodos, selCentros]);
 
 const rows25 = useMemo(
   () => filteredRows.filter((r) => r.Año === 2025),
