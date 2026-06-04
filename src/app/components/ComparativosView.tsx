@@ -1,5 +1,6 @@
 // src/components/ComparativosView.tsx
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import { Panel } from "./Panel"; 
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ||
@@ -402,100 +403,95 @@ const ofertaAcademica = useMemo(() => {
       {/* ── ROW ÚNICO: 3 columnas ──────────── */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_180px_1fr] gap-3">
 
-        {/* IZQUIERDA */}
-        <div className="flex flex-col gap-3 order-2 md:order-1">
+{/* IZQUIERDA */}
+<div className="flex flex-col gap-3 order-2 md:order-1">
 
-          {/* Profesores TC */}
-          <div className="border rounded-md overflow-hidden bg-white">
-            <TableHeader title="PROFESORES TIEMPO COMPLETO" />
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr>
-                  <th className={`${thClass} text-left`}>PROFESORES</th>
-                  <th className={thClass}>2025–1</th>
-                  <th className={thClass}>2026–1</th>
-                  <th className={thClass}>Variación</th>
-                  <th className={thClass}>%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {profTCRows.map((r, i) => (
-                  <tr key={`prof-${i}-${r.label}`} className={trHover}>
-                    <td className={tdLClass}>{r.label}</td>
-                    <td className={tdClass}>{f(r.v25)}</td>
-                    <td className={tdClass}>{f(r.v26)}</td>
-                    <DifTd v={r.v26 - r.v25} />
-                    <PctTd v={pct(r.v25, r.v26)} />
-                  </tr>
-                ))}
-                {profTCRows.length === 0 && !loading && (
-                  <tr><td colSpan={5} className="text-center text-gray-400 py-3 text-xs">Sin datos — requiere endpoint /api/colaboradores</td></tr>
-                )}
-                <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
-                  <td className={tdLClass}>Total</td>
-                  <td className={tdClass}>{f(profTCTotal25)}</td>
-                  <td className={tdClass}>{f(profTCTotal26)}</td>
-                  <DifTd v={profTCTotal26 - profTCTotal25} />
-                  <PctTd v={pct(profTCTotal25, profTCTotal26)} />
-                </tr>
-              </tbody>
-            </table>
-            {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
-          </div>
+  <Panel title="PROFESORES TIEMPO COMPLETO" defaultOpen>
+    <table className="w-full text-xs border-collapse">
+      <thead>
+        <tr>
+          <th className={`${thClass} text-left`}>PROFESORES</th>
+          <th className={thClass}>2025–1</th>
+          <th className={thClass}>2026–1</th>
+          <th className={thClass}>Variación</th>
+          <th className={thClass}>%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {profTCRows.map((r, i) => (
+          <tr key={`prof-${i}-${r.label}`} className={trHover}>
+            <td className={tdLClass}>{r.label}</td>
+            <td className={tdClass}>{f(r.v25)}</td>
+            <td className={tdClass}>{f(r.v26)}</td>
+            <DifTd v={r.v26 - r.v25} />
+            <PctTd v={pct(r.v25, r.v26)} />
+          </tr>
+        ))}
+        {profTCRows.length === 0 && !loading && (
+          <tr><td colSpan={5} className="text-center text-gray-400 py-3 text-xs">Sin datos</td></tr>
+        )}
+        <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+          <td className={tdLClass}>Total</td>
+          <td className={tdClass}>{f(profTCTotal25)}</td>
+          <td className={tdClass}>{f(profTCTotal26)}</td>
+          <DifTd v={profTCTotal26 - profTCTotal25} />
+          <PctTd v={pct(profTCTotal25, profTCTotal26)} />
+        </tr>
+      </tbody>
+    </table>
+    {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
+  </Panel>
 
-          {/* Estudiantes Totales */}
-          <div className="border rounded-md overflow-hidden bg-white">
-            <TableHeader title="ESTUDIANTES TOTALES – S1Q2" />
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr>
-                  <th className={`${thClass} text-left`}>Nivel Académico</th>
-                  <th className={thClass}>2025</th>
-                  <th className={thClass}>2026</th>
-                  <th className={thClass}>Variación</th>
-                  <th className={thClass}>%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {estTotalesRows.map((g) => (
-                  <Fragment key={`nivel-group-${g.nivel}`}>
-                    <tr className="bg-slate-50 font-bold cursor-pointer hover:bg-slate-100" onClick={() => toggleNivel(g.nivel)}>
-                      <td className={`${tdLClass} font-bold`}>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="text-slate-400 text-[10px]">{expandedNiveles[g.nivel] ? "▼" : "▶"}</span>
-                          {g.nivel}
-                        </span>
-                      </td>
-                      <td className={`${tdClass} font-bold`}>{f(g.v25)}</td>
-                      <td className={`${tdClass} font-bold`}>{f(g.v26)}</td>
-                      <DifTd v={g.v26 - g.v25} />
-                      <PctTd v={pct(g.v25, g.v26)} />
-                    </tr>
-                    {expandedNiveles[g.nivel] && g.subniveles.map((s, i) => (
-                      <tr key={`nivel-sub-${g.nivel}-${i}-${s.label}`} className={trHover}>
-                        <td className="px-2 py-0.5 text-left text-xs pl-6 text-slate-600">{s.label}</td>
-                        <td className={tdClass}>{f(s.v25)}</td>
-                        <td className={tdClass}>{f(s.v26)}</td>
-                        <DifTd v={s.v26 - s.v25} />
-                        <PctTd v={pct(s.v25, s.v26)} />
-                      </tr>
-                    ))}
-                  </Fragment>
-                ))}
-                <tr className="bg-slate-200 font-bold border-t-2 border-slate-400">
-                  <td className={`${tdLClass} font-bold`}>Total</td>
-                  <td className={`${tdClass} font-bold`}>{f(estTotal25)}</td>
-                  <td className={`${tdClass} font-bold`}>{f(estTotal26)}</td>
-                  <DifTd v={estTotal26 - estTotal25} />
-                  <PctTd v={pct(estTotal25, estTotal26)} />
-                </tr>
-              </tbody>
-            </table>
-            {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
-          </div>
+  <Panel title="ESTUDIANTES TOTALES – S1Q2" defaultOpen={false}>
+    <table className="w-full text-xs border-collapse">
+      <thead>
+        <tr>
+          <th className={`${thClass} text-left`}>Nivel Académico</th>
+          <th className={thClass}>2025</th>
+          <th className={thClass}>2026</th>
+          <th className={thClass}>Variación</th>
+          <th className={thClass}>%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {estTotalesRows.map((g) => (
+          <Fragment key={`nivel-group-${g.nivel}`}>
+            <tr className="bg-slate-50 font-bold cursor-pointer hover:bg-slate-100" onClick={() => toggleNivel(g.nivel)}>
+              <td className={`${tdLClass} font-bold`}>
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-slate-400 text-[10px]">{expandedNiveles[g.nivel] ? "▼" : "▶"}</span>
+                  {g.nivel}
+                </span>
+              </td>
+              <td className={`${tdClass} font-bold`}>{f(g.v25)}</td>
+              <td className={`${tdClass} font-bold`}>{f(g.v26)}</td>
+              <DifTd v={g.v26 - g.v25} />
+              <PctTd v={pct(g.v25, g.v26)} />
+            </tr>
+            {expandedNiveles[g.nivel] && g.subniveles.map((s, i) => (
+              <tr key={`nivel-sub-${g.nivel}-${i}-${s.label}`} className={trHover}>
+                <td className="px-2 py-0.5 text-left text-xs pl-6 text-slate-600">{s.label}</td>
+                <td className={tdClass}>{f(s.v25)}</td>
+                <td className={tdClass}>{f(s.v26)}</td>
+                <DifTd v={s.v26 - s.v25} />
+                <PctTd v={pct(s.v25, s.v26)} />
+              </tr>
+            ))}
+          </Fragment>
+        ))}
+        <tr className="bg-slate-200 font-bold border-t-2 border-slate-400">
+          <td className={`${tdLClass} font-bold`}>Total</td>
+          <td className={`${tdClass} font-bold`}>{f(estTotal25)}</td>
+          <td className={`${tdClass} font-bold`}>{f(estTotal26)}</td>
+          <DifTd v={estTotal26 - estTotal25} />
+          <PctTd v={pct(estTotal25, estTotal26)} />
+        </tr>
+      </tbody>
+    </table>
+    {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
+  </Panel>
 
-        </div>
-
+</div>
         {/* CENTRO: KPIs + Filtros */}
         <div className="flex flex-col gap-2 order-1 md:order-2">
 
@@ -526,9 +522,8 @@ const ofertaAcademica = useMemo(() => {
         <div className="flex flex-col gap-3 order-3">
 
           {/* Colaboradores TC */}
-          <div className="border rounded-md overflow-hidden bg-white">
-            <TableHeader title="COLABORADORES TIEMPO COMPLETO" />
-            <table className="w-full text-xs border-collapse">
+  <Panel title="COLABORADORES TIEMPO COMPLETO" defaultOpen={false}>
+    <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
                   <th className={`${thClass} text-left`}>Gestión Académica</th>
@@ -561,12 +556,11 @@ const ofertaAcademica = useMemo(() => {
               </tbody>
             </table>
             {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
-          </div>
+            </Panel>
 
           {/* Estudiantes Modalidad */}
-          <div className="border rounded-md overflow-hidden bg-white">
-            <TableHeader title="ESTUDIANTES MODALIDAD – S1Q2" />
-            <table className="w-full text-xs border-collapse">
+  <Panel title="ESTUDIANTES MODALIDAD – S1Q2" defaultOpen={false}>
+    <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
                   <th className={`${thClass} text-left`}>Modalidad</th>
@@ -612,7 +606,7 @@ const ofertaAcademica = useMemo(() => {
               </tbody>
             </table>
             {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
-          </div>
+            </Panel>
 
         </div>
       </div>
