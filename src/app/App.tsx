@@ -1115,14 +1115,14 @@ const clearProj = () => {
   {/* PREGRADO */}
   <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
-    <Panel title="Tabla Pareto Pregrado">
+    <Panel title="Tabla Pareto Pregrado" defaultOpen>
       <ParetoTablas
         pareto80={{ pregrado: pareto80.pregrado, posgrado: [] }}
         pareto20={{ pregrado: pareto20.pregrado, posgrado: [] }}
       />
     </Panel>
 
-    <Panel title="Gráfica Pareto Pregrado">
+    <Panel title="Gráfica Pareto Pregrado" defaultOpen={false}>
       <GraficaPareto
         titulo="Pregrado — Pareto de programas en relación a estudiantes nuevos"
         colorHeader="bg-slate-700"
@@ -1135,14 +1135,14 @@ const clearProj = () => {
   {/* POSGRADO */}
   <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] gap-3">
 
-    <Panel title="Tabla Pareto Posgrado">
+    <Panel title="Tabla Pareto Posgrado" defaultOpen={false}>
       <ParetoTablas
         pareto80={{ pregrado: [], posgrado: pareto80.posgrado }}
         pareto20={{ pregrado: [], posgrado: pareto20.posgrado }}
       />
     </Panel>
 
-    <Panel title="Gráfica Pareto Posgrado">
+    <Panel title="Gráfica Pareto Posgrado" defaultOpen={false}>
       <GraficaPareto
         titulo="Posgrado — Pareto de programas en relación a estudiantes nuevos"
         colorHeader="bg-purple-700"
