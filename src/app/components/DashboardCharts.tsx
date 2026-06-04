@@ -98,6 +98,7 @@ const normalizeNivel = (nivel: string) => {
  * - Clic en el título → colapsa/expande el contenido.
  * - `defaultOpen` controla el estado inicial (true por defecto).
  */
+// Reemplaza la función Panel interna de DashboardCharts.tsx por esta:
 function Panel({
   title,
   children,
@@ -110,6 +111,14 @@ function Panel({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   return (
     <div
@@ -120,14 +129,12 @@ function Panel({
         flexDirection: "column",
         minHeight: 0,
         minWidth: 0,
-        // Cuando está cerrado no fuerza altura, cuando está abierto ocupa todo
-        height: open ? "100%" : "auto",
+        height: (!isMobile || open) ? "100%" : "auto",
         ...style,
       }}
     >
-      {/* ── Header clicable ── */}
       <div
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => isMobile && setOpen((o) => !o)}
         style={{
           backgroundColor: "#1a3a6b",
           color: "#fff",
@@ -136,7 +143,7 @@ function Panel({
           padding: "4px 8px",
           textAlign: "center",
           flexShrink: 0,
-          cursor: "pointer",
+          cursor: isMobile ? "pointer" : "default",
           userSelect: "none",
           display: "flex",
           alignItems: "center",
@@ -145,13 +152,15 @@ function Panel({
         }}
       >
         <span style={{ flex: 1, textAlign: "center" }}>{title}</span>
-        <span style={{ fontSize: 9, opacity: 0.8, flexShrink: 0 }}>
-          {open ? "▲" : "▼"}
-        </span>
+        {isMobile && (
+          <span style={{ fontSize: 9, opacity: 0.8, flexShrink: 0 }}>
+            {open ? "▲" : "▼"}
+          </span>
+        )}
       </div>
-
-      {/* ── Contenido colapsable ── */}
-      {open && <div style={{ flex: 1, minHeight: 0 }}>{children}</div>}
+      {(!isMobile || open) && (
+        <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
+      )}
     </div>
   );
 }
@@ -554,7 +563,7 @@ export function DashboardCharts({
           {/* ROW 2 — MODALIDAD + AUSENTISMO + VIRTUALES */}
           <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 8, minHeight: 0 }}>
 
-            <Panel title="Estudiantes por Modalidad">
+            <Panel title="Estudiantes por Modalidad" defaultOpen>
               <TableScroll>
                 <table style={tStyle}>
                   <THead cols={["Nivel Académico", "Nuevos", "Continuos", "Totales"]} />
@@ -582,7 +591,7 @@ export function DashboardCharts({
               </TableScroll>
             </Panel>
 
-            <Panel title="Ausentismo y Deserción">
+            <Panel title="Ausentismo y Deserción" defaultOpen={false}>
               <TableScroll>
                 <table style={tStyle}>
                   <THead cols={["Modalidad", "Ausentes", "%", "Desertores", "%"]} />
@@ -684,7 +693,7 @@ export function DashboardCharts({
               </TableScroll>
             </Panel>
 
-            <Panel title="Estudiantes Virtuales">
+            <Panel title="Estudiantes Virtuales" defaultOpen={false}>
               <TableScroll>
                 <table style={tStyle}>
                   <THead cols={["Estado", "Cantidad"]} />
@@ -715,7 +724,7 @@ export function DashboardCharts({
           {/* ROW 3 — CENTROS + FACULTADES */}
           <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 8, minHeight: 0 }}>
 
-            <Panel title="Estudiantes por Centro Universitario y Modalidad">
+            <Panel title="Estudiantes por Centro Universitario y Modalidad" defaultOpen={false}>
               <TableScroll>
                 <div style={{ maxHeight: "375px", overflowY: "auto" }}>
                   <table style={tStyle}>
@@ -759,7 +768,7 @@ export function DashboardCharts({
               </TableScroll>
             </Panel>
 
-            <Panel title="Estudiantes por Facultad">
+            <Panel title="Estudiantes por Facultad" defaultOpen={false}>
               <TableScroll>
                 <div style={{ maxHeight: "375px", overflowY: "auto" }}>
                   <table style={tStyle}>
