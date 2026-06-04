@@ -151,8 +151,19 @@ export async function fetchTableMulti(
   if (f.niveles?.length)
     rows = rows.filter(r => f.niveles!.includes(normalizeNivel(r.nivelAcademico)));
 
-  if (f.periodos?.length)
-    rows = rows.filter(r => f.periodos!.some(p => norm(r.periodo) === norm(p)));
+  const has2026 = f.years?.includes('2026');
+  const periodosEfectivos: string[] = f.periodos?.length
+    ? f.periodos
+    : has2026 ? ['S1', 'Q2'] : [];
+
+  if (periodosEfectivos.length)
+    rows = rows.filter(r => {
+    // Para filas de 2026 sin período manual: aplicar S1+Q2
+      if (!f.periodos?.length && has2026 && r.fecha === '2026')
+        return norm(r.periodo) === 's1' || norm(r.periodo) === 'q2';
+    // Para otros años o cuando hay período manual: filtro normal
+      return periodosEfectivos.some(p => norm(r.periodo) === norm(p));
+    });
 
   if (f.centros?.length)
     rows = rows.filter(r => f.centros!.some(c => norm(r.centro ?? '') === norm(c)));
