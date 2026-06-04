@@ -54,7 +54,7 @@ export function Panel({
         )}
       </div>
       {(!isMobile || open) && (
-        <div style={{ flex: 1, minHeight: isMobile ? 200 : "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           {children}
         </div>
       )}
