@@ -199,7 +199,6 @@ async function warmupCacheDirect() {
     console.log('📊 Años encontrados:', years);
 
     // ── 2. Población por año (en paralelo) ──────────────────────────────────
-    // ── 2. Población por año (en paralelo) ──────────────────────────────────
 await Promise.all(years.map(async (year) => {
   try {
     const result = await pool.request()
@@ -316,12 +315,13 @@ for (const periodo of ['2025-1', '2026-1']) {
       [Nivel Académico],
       [Nivel de Formación],
       [Periodo],
+      [Centro Universitario], 
       SUM([Estudiantes Totales]) AS total
     FROM [Poblacion_Estudiantil]
     WHERE ${buildRectoriaFilter()}
       AND [Año] IN (2025, 2026)
       AND [Periodo] IN ('S1', 'Q2')
-    GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación], [Periodo]
+    GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación], [Periodo], [Centro Universitario]
   `);
   await setCache('comparativos:all', r.recordset);
   console.log(`✅ comparativos:all → ${r.recordset.length}`);
