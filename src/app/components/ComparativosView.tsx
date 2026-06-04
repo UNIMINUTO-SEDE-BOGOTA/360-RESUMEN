@@ -504,6 +504,17 @@ const ofertaAcademica = useMemo(() => {
         {/* CENTRO: KPIs + Filtros */}
         <div className="flex flex-col gap-2 order-1 md:order-2">
 
+          <div className="border rounded-md bg-white p-2 flex flex-col gap-2">
+  <div className="text-[10px] font-bold text-slate-500 uppercase">Filtros</div>
+  <MultiCheckDropdown
+    label="Centro Universitario"
+    options={centroOpts}
+    selected={selCentros}
+    onChange={setSelCentros}
+  />
+          </div>
+
+
           <div className="border rounded-md bg-white p-3 text-center">
             <div className="text-[10px] text-gray-500 mb-0.5">Colaboradores 2026–1</div>
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : f(totalColab26)}</div>
@@ -524,21 +535,9 @@ const ofertaAcademica = useMemo(() => {
             <div className="text-[10px] text-gray-500 mb-0.5">Programas Acreditados</div>
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : programasAcreditados}</div>
           </div>
-
-          <div className="border rounded-md bg-white p-2 flex flex-col gap-2">
-  <div className="text-[10px] font-bold text-slate-500 uppercase">Filtros</div>
-  <MultiCheckDropdown
-    label="Centro Universitario"
-    options={centroOpts}
-    selected={selCentros}
-    onChange={setSelCentros}
-  />
-          </div>
-
+          
         </div>
-
         
-
         {/* DERECHA */}
         <div className="flex flex-col gap-3 order-3">
 
