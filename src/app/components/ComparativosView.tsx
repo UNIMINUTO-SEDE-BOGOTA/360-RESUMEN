@@ -12,17 +12,16 @@ function DifTd({ v }: { v: number }) {
   const c = v > 0 ? "text-blue-600" : v < 0 ? "text-red-600" : "text-gray-500";
   const sign = v > 0 ? "+" : "";
   return (
-    <td className={`text-right px-2 py-0.5 ${c} font-medium`}>
+    <td className={`text-right px-2 py-0.5 ${c} font-medium whitespace-nowrap`}>
       {sign}{f(v)}
     </td>
   );
 }
-
 function PctTd({ v }: { v: number }) {
   const c = v > 0 ? "text-blue-600" : v < 0 ? "text-red-600" : "text-gray-500";
   const sign = v > 0 ? "+" : "";
   return (
-    <td className={`text-right px-2 py-0.5 ${c} font-medium`}>
+    <td className={`text-right px-2 py-0.5 ${c} font-medium whitespace-nowrap`}>
       {sign}{v.toFixed(2)} %
     </td>
   );
@@ -416,7 +415,7 @@ const ofertaAcademica = useMemo(() => {
 <div className="flex flex-col gap-3 order-2 md:order-1">
 
   <Panel title="PROFESORES TIEMPO COMPLETO" defaultOpen>
-    <table className="w-full text-xs border-collapse">
+    <table className="w-full text-xs border-collapse table-auto">
       <thead>
         <tr>
           <th className={`${thClass} text-left`}>PROFESORES</th>
@@ -452,7 +451,7 @@ const ofertaAcademica = useMemo(() => {
   </Panel>
 
   <Panel title="ESTUDIANTES TOTALES – S1Q2" defaultOpen={false}>
-    <table className="w-full text-xs border-collapse">
+    <table className="w-full text-xs border-collapse table-auto">
       <thead>
         <tr>
           <th className={`${thClass} text-left`}>Nivel Académico</th>
@@ -543,7 +542,7 @@ const ofertaAcademica = useMemo(() => {
 
           {/* Colaboradores TC */}
   <Panel title="COLABORADORES TIEMPO COMPLETO" defaultOpen={false}>
-    <table className="w-full text-xs border-collapse">
+    <table className="w-full text-xs border-collapse table-auto">
               <thead>
                 <tr>
                   <th className={`${thClass} text-left`}>Gestión Académica</th>
@@ -580,7 +579,7 @@ const ofertaAcademica = useMemo(() => {
 
           {/* Estudiantes Modalidad */}
   <Panel title="ESTUDIANTES MODALIDAD – S1Q2" defaultOpen={false}>
-    <table className="w-full text-xs border-collapse">
+    <table className="w-full text-xs border-collapse table-auto">
               <thead>
                 <tr>
                   <th className={`${thClass} text-left`}>Modalidad</th>
