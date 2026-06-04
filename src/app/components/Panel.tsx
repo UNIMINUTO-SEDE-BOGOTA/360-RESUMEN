@@ -3,16 +3,18 @@ import { useState, useEffect } from "react";
 export function Panel({
   title,
   children,
+  defaultOpen = true,  // ← nuevo prop
 }: {
   title: string;
   children: React.ReactNode;
+  defaultOpen?: boolean;  // ← nuevo prop
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);  // ← usa defaultOpen
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const check = () => {
-      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+      setIsMobile(window.innerWidth < 1024);
     };
     check();
     window.addEventListener("resize", check);
@@ -28,7 +30,6 @@ export function Panel({
         flexDirection: "column",
       }}
     >
-      {/* Header SOLO clicable en móvil */}
       <div
         onClick={() => isMobile && setOpen(!open)}
         style={{
@@ -46,16 +47,12 @@ export function Panel({
         }}
       >
         <span>{title}</span>
-
-        {/* Flecha solo en móvil */}
         {isMobile && (
           <span style={{ fontSize: 9 }}>
             {open ? "▲" : "▼"}
           </span>
         )}
       </div>
-
-      {/* En PC SIEMPRE visible */}
       {(!isMobile || open) && (
         <div style={{ flex: 1, minHeight: isMobile ? 200 : "auto" }}>
           {children}
