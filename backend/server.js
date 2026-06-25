@@ -193,7 +193,7 @@ async function warmupCacheDirect() {
   try {
     // ── 1. Años disponibles ──────────────────────────────────────────────────
     const resultYears = await pool.request().query(`
-      SELECT DISTINCT [Año] as year FROM Poblacion_Estudiantil ORDER BY [Año]
+      SELECT DISTINCT [Año] as year FROM Poblacion_Estudiantil2 ORDER BY [Año]
     `);
     const years = resultYears.recordset.map(r => String(r.year));
     console.log('📊 Años encontrados:', years);
@@ -219,7 +219,7 @@ await Promise.all(years.map(async (year) => {
           [Periodo]                AS periodo,
           [Periodicidad]           AS periodicidad,
           [Rectoría]               AS rectoria
-        FROM Poblacion_Estudiantil
+        FROM Poblacion_Estudiantil2
         WHERE [Año] = @year
           AND LOWER(LTRIM(RTRIM(
                 REPLACE(REPLACE(REPLACE(REPLACE(
@@ -317,7 +317,7 @@ for (const periodo of ['2025-1', '2026-1']) {
       [Periodo],
       [Centro Universitario], 
       SUM([Estudiantes Totales]) AS total
-    FROM [Poblacion_Estudiantil]
+    FROM [Poblacion_Estudiantil2]
     WHERE ${buildRectoriaFilter()}
       AND [Año] IN (2025, 2026)
       AND [Periodo] IN ('S1', 'Q2')
@@ -457,7 +457,7 @@ app.get('/api/oferta-activa', async (_req, res) => {
 app.get('/api/datos/:tabla', async (req, res) => {
   const tabla = normalize(req.params.tabla);
 
-  if (tabla !== 'poblacion_estudiantil') {
+  if (tabla !== 'poblacion_estudiantil2') {
     return res.json({ rows: [] });
   }
 
