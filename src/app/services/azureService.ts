@@ -45,7 +45,7 @@ const API_URL =
     (import.meta as any).env.VITE_API_URL) ||
   'https://three60-resumen-backend.onrender.com';
 
-const TABLE = encodeURIComponent('Poblacion_Estudiantil');
+const TABLE = encodeURIComponent('Poblacion_Estudiantil2');
 
 // ==================== HELPERS ====================
 
