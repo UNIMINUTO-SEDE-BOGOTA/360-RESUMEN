@@ -168,7 +168,7 @@ function App() {
     sufijoPeriodos: []
   });
 
-  const fechaCorte = "20 de marzo de 2026";
+  const fechaCorte = "3 de junio de 2026";
 
   const [activeTab, setActiveTab] = useState("estudiantes");
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
