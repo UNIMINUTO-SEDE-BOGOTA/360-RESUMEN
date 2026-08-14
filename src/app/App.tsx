@@ -22,7 +22,7 @@ import { ParetoTablas } from "./components/ParetoTablas";
 import { GraficaPareto } from "./components/GraficaPareto";
 import { Panel } from "./components/Panel";
 
-
+// API del backend
 const API_URL =
   (typeof import.meta !== "undefined" &&
     (import.meta as any).env &&
