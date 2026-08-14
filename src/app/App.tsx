@@ -639,14 +639,7 @@ const buildPareto = (data: any[]) => {
           pct_ausentes: v.total ? (v.aus / v.total) * 100 : 0,
           desertores: v.des,
           pct_desertores: v.total ? (v.des / v.total) * 100 : 0
-        })),
-        {
-          modalidad: "UNIMINUTO Bogotá",
-          ausentes: totalAus.aus,
-          pct_ausentes: totalAus.total ? (totalAus.aus / totalAus.total) * 100 : 0,
-          desertores: totalAus.des,
-          pct_desertores: totalAus.total ? (totalAus.des / totalAus.total) * 100 : 0
-        }
+        }))
       ]);
 
       // ── Virtual 2026-S1 ──

@@ -484,11 +484,15 @@ export function DashboardCharts({
 
   // ── AUSENTISMO ────────────────────────────────────────────────
 
-  const totalAus = ausDes.reduce((s, d) => s + d.ausentes, 0);
-  const totalDes = ausDes.reduce((s, d) => s + d.desertores, 0);
-  const pctAusTotal = totalEst > 0 ? (totalAus * 100) / totalEst : 0;
-  const pctDesTotal = totalEst > 0 ? (totalDes * 100) / totalEst : 0;
+  const totalAus = ausDes.reduce((s, d) => s + Number(d.ausentes || 0), 0);
+  const totalDes = ausDes.reduce((s, d) => s + Number(d.desertores || 0), 0);
+  const totalAusBase = ausDes.reduce((s, d) => s + Number(d.total || 0), 0);
 
+  const pctAusTotal =
+    totalAusBase > 0 ? (totalAus * 100) / totalAusBase : 0;
+
+  const pctDesTotal =
+    totalAusBase > 0 ? (totalDes * 100) / totalAusBase : 0;
   // ── VIRTUALES ─────────────────────────────────────────────────
 
   const virtualTree = new Map<
