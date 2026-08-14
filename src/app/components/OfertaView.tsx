@@ -7,7 +7,7 @@ import { DropdownMulti } from "./FiltersMulti";
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ||
-  "https://three60-resumen-backend.onrender.com";
+  "https://three60-resumen.onrender.com";
 
 interface Programa {
   facultad: string;

@@ -14,7 +14,7 @@ export function BackendSetupGuide() {
   (typeof import.meta !== "undefined" &&
     (import.meta as any).env &&
     (import.meta as any).env.VITE_API_URL) ||
-  "https://three60-resumen-backend.onrender.com";
+  "https://three60-resumen.onrender.com";
   
   const [copied, setCopied] = useState<string | null>(null);
   const [status, setStatus] = useState<

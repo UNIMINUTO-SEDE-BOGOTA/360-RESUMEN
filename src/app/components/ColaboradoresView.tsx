@@ -8,7 +8,7 @@ import { Panel } from "./Panel";
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ||
-  "https://three60-resumen-backend.onrender.com";
+  "https://three60-resumen.onrender.com";
 
 
 // ─────────────────────────────────────────────
