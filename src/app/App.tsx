@@ -459,7 +459,13 @@ const buildPareto = (data: any[]) => {
 
       console.log("🔍 rows recibidos:", rows.length, rows[0]);
 
-      
+      const sumaTotalesRows = rows.reduce(
+        (s, r) => s + (r.totales ?? 0),
+        0
+      );
+
+      console.log("🔍 suma r.totales:", sumaTotalesRows);
+      console.log("🔍 stats.estudiantes:", stats?.estudiantes);
 
       // ── byCentro ──
       const centroMap: Record<string, any> = {};
@@ -630,6 +636,28 @@ const buildPareto = (data: any[]) => {
       const totalAus = Object.values(ausMap).reduce(
         (a, b) => ({ aus: a.aus + b.aus, des: a.des + b.des, total: a.total + b.total }),
         { aus: 0, des: 0, total: 0 }
+      );
+
+      const totalEstDebug = rows.reduce((sum, r) => sum + (r.totales ?? 0), 0);
+      const totalAusDebug = Object.values(ausMap).reduce((sum, item: any) => sum + (item.aus ?? 0), 0);
+      const totalDesDebug = Object.values(ausMap).reduce((sum, item: any) => sum + (item.des ?? 0), 0);
+
+      console.log("DEBUG rows:", rows.length);
+      console.log("DEBUG totalEstDebug:", totalEstDebug);
+      console.log("DEBUG ausMap antes de setAusDes:", JSON.parse(JSON.stringify(ausMap)));
+      console.log("DEBUG totalAusDebug:", totalAusDebug);
+      console.log("DEBUG totalDesDebug:", totalDesDebug);
+      console.log("DEBUG pctAusTotal:", totalEstDebug > 0 ? (totalAusDebug * 100) / totalEstDebug : 0);
+      console.log("DEBUG pctDesTotal:", totalEstDebug > 0 ? (totalDesDebug * 100) / totalEstDebug : 0);
+      console.table(
+        Object.entries(ausMap).map(([modalidad, v]) => ({
+          modalidad,
+          ausentes: v.aus,
+          desertores: v.des,
+          total: v.total,
+          pct_ausentes: v.total ? (v.aus / v.total) * 100 : 0,
+          pct_desertores: v.total ? (v.des / v.total) * 100 : 0
+        }))
       );
 
       setAusDes([
