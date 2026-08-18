@@ -619,6 +619,16 @@ const buildPareto = (data: any[]) => {
       escuelaRows.push(totalRow);
       setByEscuela(escuelaRows);
 
+      // ── DEBUG: Ver qué trae rows ──
+      if (rows.length > 0) {
+        console.log("DEBUG Primer row completo:", rows[0]);
+        console.log("DEBUG Propiedades de rows[0]:", Object.keys(rows[0]));
+        console.log("DEBUG ausentes en rows[0]:", rows[0].ausentes);
+        console.log("DEBUG desertores en rows[0]:", rows[0].desertores);
+        console.log("DEBUG tasaAusentismo en rows[0]:", rows[0].tasaAusentismo);
+        console.log("DEBUG tasaDesercion en rows[0]:", rows[0].tasaDesercion);
+      }
+
       // ── Ausentismo ──
       const ausMap: Record<string, { ausentes: number; desertores: number; tasaAusentismo: number[]; tasaDesercion: number[] }> = {};
 
@@ -653,7 +663,7 @@ const buildPareto = (data: any[]) => {
         };
       });
 
-      console.log("DEBUG Ausentismo y Deserción:", ausDes);
+      console.log("DEBUG Ausentismo y Deserción FINAL:", ausDes);
       setAusDes(ausDes);
 
       // ── Virtual 2026-S1 ──
