@@ -218,7 +218,11 @@ await Promise.all(years.map(async (year) => {
           [Estudiantes Totales]    AS totales,
           [Periodo]                AS periodo,
           [Periodicidad]           AS periodicidad,
-          [Rectoría]               AS rectoria
+          [Rectoría]               AS rectoria,
+          [Ausentes (Periodo)]     AS ausentes,
+          [Desertores (Periodo)]   AS desertores,
+          [Tasa de Ausentismo (periodo)]  AS tasaAusentismo,
+          [Tasa Deserción (periodo)]      AS tasaDesercion
         FROM Poblacion_Estudiantil2
         WHERE [Año] = @year
           AND LOWER(LTRIM(RTRIM(
