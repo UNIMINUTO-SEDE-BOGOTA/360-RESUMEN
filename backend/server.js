@@ -233,9 +233,10 @@ await Promise.all(years.map(async (year) => {
       `);
 
     await setCache(`poblacion:${year}`, result.recordset);
-    console.log(`✅ poblacion:${year} → ${result.recordset.length} filas`);
+    console.log(`✅ poblacion:${year} → ${result.recordset.length} filas con nuevas columnas`);
   } catch (err) {
     console.error(`❌ Error cargando año ${year}:`, err.message);
+    console.error(`Stack:`, err.stack);
   }
 }));
 
