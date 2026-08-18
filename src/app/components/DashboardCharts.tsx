@@ -594,7 +594,7 @@ export function DashboardCharts({
             <Panel title="Ausentismo y Deserción" defaultOpen={false}>
               <TableScroll>
                 <table style={tStyle}>
-                  <THead cols={["Modalidad", "Tasa Ausentismo %", "Tasa Deserción %"]} />
+                  <THead cols={["Modalidad", "Ausentes", "%", "Desertores", "%"]} />
                   <tbody>
                     {ausDes.map((d, i) => (
                       <tr
@@ -611,11 +611,29 @@ export function DashboardCharts({
                           style={{
                             textAlign: "right",
                             padding: "3px 6px",
+                            borderBottom: "1px solid #dde3ee",
+                          }}
+                        >
+                          {numFmt(d.ausentes)}
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "right",
+                            padding: "3px 6px",
                             color: pctColor(d.pct_ausentes),
                             borderBottom: "1px solid #dde3ee",
                           }}
                         >
                           {d.pct_ausentes.toFixed(2)} %
+                        </td>
+                        <td
+                          style={{
+                            textAlign: "right",
+                            padding: "3px 6px",
+                            borderBottom: "1px solid #dde3ee",
+                          }}
+                        >
+                          {numFmt(d.desertores)}
                         </td>
                         <td
                           style={{

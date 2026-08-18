@@ -626,8 +626,9 @@ const buildPareto = (data: any[]) => {
         const mod = mapModalidad(r.categoria);
         if (!ausMap[mod]) ausMap[mod] = { tasaAusentismo: [], tasaDesercion: [], count: 0 };
         
-        const tasaAus = r.tasaAusentismo ?? 0;
-        const tasaDes = r.tasaDesercion ?? 0;
+        // Convertir de decimal (0.17) a porcentaje (17)
+        const tasaAus = (r.tasaAusentismo ?? 0) * 100;
+        const tasaDes = (r.tasaDesercion ?? 0) * 100;
         
         ausMap[mod].tasaAusentismo.push(tasaAus);
         ausMap[mod].tasaDesercion.push(tasaDes);
@@ -645,9 +646,9 @@ const buildPareto = (data: any[]) => {
         
         return {
           modalidad,
-          ausentes: Math.round(pct_ausentes * 10) / 10, // Redondeado a 1 decimal
+          ausentes: Math.round(pct_ausentes),
           pct_ausentes,
-          desertores: Math.round(pct_desertores * 10) / 10,
+          desertores: Math.round(pct_desertores),
           pct_desertores
         };
       });
