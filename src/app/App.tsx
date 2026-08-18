@@ -617,53 +617,59 @@ const buildPareto = (data: any[]) => {
         totalRow.total += totalGeneral[c];
       });
       escuelaRows.push(totalRow);
-      setByEscuela(escuelaRows);
-
-      // ── DEBUG: Ver qué trae rows ──
-      if (rows.length > 0) {
-        console.log("=== ANÁLISIS DETALLADO DEL PRIMER ROW ===");
-        console.log("Primer row completo:", rows[0]);
-        console.log("Propiedades de rows[0]:", Object.keys(rows[0]));
-        console.log("ausentes:", rows[0].ausentes, "tipo:", typeof rows[0].ausentes);
-        console.log("desertores:", rows[0].desertores, "tipo:", typeof rows[0].desertores);
-        console.log("tasaAusentismo:", rows[0].tasaAusentismo, "tipo:", typeof rows[0].tasaAusentismo);
-        console.log("tasaDesercion:", rows[0].tasaDesercion, "tipo:", typeof rows[0].tasaDesercion);
-        
-        // Verificar si las columnas nuevas existen
-        const tieneNuevasColumnas = 
-          rows[0].hasOwnProperty('ausentes') && 
-          rows[0].hasOwnProperty('desertores') && 
-          rows[0].hasOwnProperty('tasaAusentismo') && 
-          rows[0].hasOwnProperty('tasaDesercion');
-        
-        console.log("¿Tiene nuevas columnas?:", tieneNuevasColumnas);
-        console.log("=== FIN ANÁLISIS ===");
-      }
-
       // ── Ausentismo ──
-      const ausMap: Record<string, { ausentes: number; desertores: number; tasaAusentismo: number[]; tasaDesercion: number[] }> = {};
+      const ausMap: Record<string, { ausentes: number; desertores: number; tasaAusentismo: number[]; tasaDesercion: number[]; total: number }> = {};
 
       rows.forEach(r => {
         const mod = mapModalidad(r.categoria);
-        if (!ausMap[mod]) ausMap[mod] = { ausentes: 0, desertores: 0, tasaAusentismo: [], tasaDesercion: [] };
+        if (!ausMap[mod]) ausMap[mod] = { ausentes: 0, desertores: 0, tasaAusentismo: [], tasaDesercion: [], total: 0 };
         
-        // Sumar números enteros
-        ausMap[mod].ausentes += r.ausentes ?? 0;
-        ausMap[mod].desertores += r.desertores ?? 0;
+        // Intentar traer desde las nuevas columnas
+        if (r.ausentes !== undefined && r.ausentes !== null) {
+          ausMap[mod].ausentes += r.ausentes;
+        } else {
+          // FALLBACK: calcular manualmente si no existen las columnas
+          const nuevos = r.nuevos ?? 0;
+          const continuos = r.continuos ?? 0;
+          ausMap[mod].ausentes += Math.max(nuevos - continuos, 0);
+        }
         
-        // Recolectar tasas para promediar (convertir de decimal a porcentaje)
-        ausMap[mod].tasaAusentismo.push((r.tasaAusentismo ?? 0) * 100);
-        ausMap[mod].tasaDesercion.push((r.tasaDesercion ?? 0) * 100);
+        if (r.desertores !== undefined && r.desertores !== null) {
+          ausMap[mod].desertores += r.desertores;
+        } else {
+          // FALLBACK: calcular manualmente si no existen las columnas
+          const totales = r.totales ?? 0;
+          const continuos = r.continuos ?? 0;
+          ausMap[mod].desertores += Math.max(totales - continuos, 0);
+        }
+        
+        // Recolectar tasas si existen, sino dejar array vacío
+        if (r.tasaAusentismo !== undefined && r.tasaAusentismo !== null) {
+          ausMap[mod].tasaAusentismo.push((r.tasaAusentismo ?? 0) * 100);
+        }
+        if (r.tasaDesercion !== undefined && r.tasaDesercion !== null) {
+          ausMap[mod].tasaDesercion.push((r.tasaDesercion ?? 0) * 100);
+        }
+        
+        ausMap[mod].total += r.totales ?? 0;
       });
 
       // Convertir map a array con cálculos finales
       const ausDes = Object.entries(ausMap).map(([modalidad, data]) => {
-        const pct_ausentes = data.tasaAusentismo.length > 0 
-          ? data.tasaAusentismo.reduce((a, b) => a + b, 0) / data.tasaAusentismo.length 
-          : 0;
-        const pct_desertores = data.tasaDesercion.length > 0 
-          ? data.tasaDesercion.reduce((a, b) => a + b, 0) / data.tasaDesercion.length 
-          : 0;
+        // Si tenemos tasas promedias, usarlas; si no, calcular desde totales
+        let pct_ausentes = 0;
+        if (data.tasaAusentismo.length > 0) {
+          pct_ausentes = data.tasaAusentismo.reduce((a, b) => a + b, 0) / data.tasaAusentismo.length;
+        } else if (data.total > 0) {
+          pct_ausentes = (data.ausentes / data.total) * 100;
+        }
+        
+        let pct_desertores = 0;
+        if (data.tasaDesercion.length > 0) {
+          pct_desertores = data.tasaDesercion.reduce((a, b) => a + b, 0) / data.tasaDesercion.length;
+        } else if (data.total > 0) {
+          pct_desertores = (data.desertores / data.total) * 100;
+        }
         
         return {
           modalidad,
@@ -675,6 +681,7 @@ const buildPareto = (data: any[]) => {
       });
 
       console.log("DEBUG Ausentismo y Deserción FINAL:", ausDes);
+      console.log("DEBUG ¿Tiene columnas nuevas?", rows.length > 0 && rows[0].hasOwnProperty('ausentes'));
       setAusDes(ausDes);
 
       // ── Virtual 2026-S1 ──
