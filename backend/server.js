@@ -201,6 +201,7 @@ async function warmupCacheDirect() {
     // ── 2. Población por año (en paralelo) ──────────────────────────────────
 await Promise.all(years.map(async (year) => {
   try {
+    console.log(`🔄 Cargando año ${year}...`);
     const result = await pool.request()
       .input('year', sql.Int, Number(year))
       .query(`
@@ -219,10 +220,10 @@ await Promise.all(years.map(async (year) => {
           [Periodo]                AS periodo,
           [Periodicidad]           AS periodicidad,
           [Rectoría]               AS rectoria,
-          [Ausentes (Periodo)]     AS ausentes,
-          [Desertores (Periodo)]   AS desertores,
-          [Tasa de Ausentismo (periodo)]  AS tasaAusentismo,
-          [Tasa Deserción (periodo)]      AS tasaDesercion
+          ISNULL([Ausentes (Periodo)], 0)     AS ausentes,
+          ISNULL([Desertores (Periodo)], 0)   AS desertores,
+          ISNULL([Tasa de Ausentismo (periodo)], 0)  AS tasaAusentismo,
+          ISNULL([Tasa Deserción (periodo)], 0)      AS tasaDesercion
         FROM Poblacion_Estudiantil2
         WHERE [Año] = @year
           AND LOWER(LTRIM(RTRIM(
@@ -232,11 +233,17 @@ await Promise.all(years.map(async (year) => {
               ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
       `);
 
+    if (result.recordset.length > 0) {
+      console.log(`✅ Primer registro año ${year}:`, JSON.stringify(result.recordset[0]));
+    }
+    
     await setCache(`poblacion:${year}`, result.recordset);
-    console.log(`✅ poblacion:${year} → ${result.recordset.length} filas con nuevas columnas`);
+    console.log(`✅ poblacion:${year} → ${result.recordset.length} filas. Cache actualizado.`);
   } catch (err) {
-    console.error(`❌ Error cargando año ${year}:`, err.message);
-    console.error(`Stack:`, err.stack);
+    console.error(`❌ ERROR CRÍTICO año ${year}:`, err.message);
+    console.error(`Stack completo:`, err.stack);
+    console.error(`Número de error SQL:`, err.number);
+    console.error(`Línea SQL:`, err.lineNumber);
   }
 }));
 
