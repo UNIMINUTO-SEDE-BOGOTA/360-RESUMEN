@@ -621,12 +621,23 @@ const buildPareto = (data: any[]) => {
 
       // ── DEBUG: Ver qué trae rows ──
       if (rows.length > 0) {
-        console.log("DEBUG Primer row completo:", rows[0]);
-        console.log("DEBUG Propiedades de rows[0]:", Object.keys(rows[0]));
-        console.log("DEBUG ausentes en rows[0]:", rows[0].ausentes);
-        console.log("DEBUG desertores en rows[0]:", rows[0].desertores);
-        console.log("DEBUG tasaAusentismo en rows[0]:", rows[0].tasaAusentismo);
-        console.log("DEBUG tasaDesercion en rows[0]:", rows[0].tasaDesercion);
+        console.log("=== ANÁLISIS DETALLADO DEL PRIMER ROW ===");
+        console.log("Primer row completo:", rows[0]);
+        console.log("Propiedades de rows[0]:", Object.keys(rows[0]));
+        console.log("ausentes:", rows[0].ausentes, "tipo:", typeof rows[0].ausentes);
+        console.log("desertores:", rows[0].desertores, "tipo:", typeof rows[0].desertores);
+        console.log("tasaAusentismo:", rows[0].tasaAusentismo, "tipo:", typeof rows[0].tasaAusentismo);
+        console.log("tasaDesercion:", rows[0].tasaDesercion, "tipo:", typeof rows[0].tasaDesercion);
+        
+        // Verificar si las columnas nuevas existen
+        const tieneNuevasColumnas = 
+          rows[0].hasOwnProperty('ausentes') && 
+          rows[0].hasOwnProperty('desertores') && 
+          rows[0].hasOwnProperty('tasaAusentismo') && 
+          rows[0].hasOwnProperty('tasaDesercion');
+        
+        console.log("¿Tiene nuevas columnas?:", tieneNuevasColumnas);
+        console.log("=== FIN ANÁLISIS ===");
       }
 
       // ── Ausentismo ──
