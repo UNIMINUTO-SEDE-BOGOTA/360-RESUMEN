@@ -620,55 +620,40 @@ const buildPareto = (data: any[]) => {
       setByEscuela(escuelaRows);
 
       // ── Ausentismo ──
-      const ausMap: Record<string, { aus: number; des: number; total: number }> = {};
+      const ausMap: Record<string, { tasaAusentismo: number[]; tasaDesercion: number[]; count: number }> = {};
 
       rows.forEach(r => {
         const mod = mapModalidad(r.categoria);
-        if (!ausMap[mod]) ausMap[mod] = { aus: 0, des: 0, total: 0 };
-        const nuevos = r.nuevos ?? 0;
-        const continuos = r.continuos ?? 0;
-        const totales = r.totales ?? 0;
-        ausMap[mod].aus += Math.max(nuevos - continuos, 0);
-        ausMap[mod].des += Math.max(totales - continuos, 0);
-        ausMap[mod].total += totales;
+        if (!ausMap[mod]) ausMap[mod] = { tasaAusentismo: [], tasaDesercion: [], count: 0 };
+        
+        const tasaAus = r.tasaAusentismo ?? 0;
+        const tasaDes = r.tasaDesercion ?? 0;
+        
+        ausMap[mod].tasaAusentismo.push(tasaAus);
+        ausMap[mod].tasaDesercion.push(tasaDes);
+        ausMap[mod].count += 1;
       });
 
-      const totalAus = Object.values(ausMap).reduce(
-        (a, b) => ({ aus: a.aus + b.aus, des: a.des + b.des, total: a.total + b.total }),
-        { aus: 0, des: 0, total: 0 }
-      );
-
-      const totalEstDebug = rows.reduce((sum, r) => sum + (r.totales ?? 0), 0);
-      const totalAusDebug = Object.values(ausMap).reduce((sum, item: any) => sum + (item.aus ?? 0), 0);
-      const totalDesDebug = Object.values(ausMap).reduce((sum, item: any) => sum + (item.des ?? 0), 0);
-
-      console.log("DEBUG rows:", rows.length);
-      console.log("DEBUG totalEstDebug:", totalEstDebug);
-      console.log("DEBUG ausMap antes de setAusDes:", JSON.parse(JSON.stringify(ausMap)));
-      console.log("DEBUG totalAusDebug:", totalAusDebug);
-      console.log("DEBUG totalDesDebug:", totalDesDebug);
-      console.log("DEBUG pctAusTotal:", totalEstDebug > 0 ? (totalAusDebug * 100) / totalEstDebug : 0);
-      console.log("DEBUG pctDesTotal:", totalEstDebug > 0 ? (totalDesDebug * 100) / totalEstDebug : 0);
-      console.table(
-        Object.entries(ausMap).map(([modalidad, v]) => ({
+      // Calcular promedios por modalidad
+      const ausDes = Object.entries(ausMap).map(([modalidad, data]) => {
+        const pct_ausentes = data.tasaAusentismo.length > 0 
+          ? data.tasaAusentismo.reduce((a, b) => a + b, 0) / data.tasaAusentismo.length 
+          : 0;
+        const pct_desertores = data.tasaDesercion.length > 0 
+          ? data.tasaDesercion.reduce((a, b) => a + b, 0) / data.tasaDesercion.length 
+          : 0;
+        
+        return {
           modalidad,
-          ausentes: v.aus,
-          desertores: v.des,
-          total: v.total,
-          pct_ausentes: v.total ? (v.aus / v.total) * 100 : 0,
-          pct_desertores: v.total ? (v.des / v.total) * 100 : 0
-        }))
-      );
+          ausentes: Math.round(pct_ausentes * 10) / 10, // Redondeado a 1 decimal
+          pct_ausentes,
+          desertores: Math.round(pct_desertores * 10) / 10,
+          pct_desertores
+        };
+      });
 
-      setAusDes([
-        ...Object.entries(ausMap).map(([modalidad, v]) => ({
-          modalidad,
-          ausentes: v.aus,
-          pct_ausentes: v.total ? (v.aus / v.total) * 100 : 0,
-          desertores: v.des,
-          pct_desertores: v.total ? (v.des / v.total) * 100 : 0
-        }))
-      ]);
+      console.log("DEBUG Ausentismo y Deserción calculados desde Azure:", ausDes);
+      setAusDes(ausDes);
 
       // ── Virtual 2026-S1 ──
       const virtuales = virtual2026S1Data.filter(
