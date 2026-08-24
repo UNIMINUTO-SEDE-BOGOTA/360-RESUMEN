@@ -149,7 +149,7 @@ export default function ColaboradoresView() {
   // Fetch
   useEffect(() => {
     setLoading(true);
-    fetch(`${API_URL}/api/colaboradores?periodo=2026-1`)
+    fetch(`${API_URL}/api/colaboradores?periodo=2026-2`)
       .then(r => r.json())
       .then(d => {
         console.log("🔍 colaboradores raw:", d?.length, d?.[0]);

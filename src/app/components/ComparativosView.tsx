@@ -177,7 +177,7 @@ export default function ComparativosView() {
         try {
           const [resC25, resC26] = await Promise.all([
             fetch(`${API_URL}/api/colaboradores?periodo=2025-1`),
-            fetch(`${API_URL}/api/colaboradores?periodo=2026-1`),
+            fetch(`${API_URL}/api/colaboradores?periodo=2026-2`),
           ]);
           const [c25, c26] = await Promise.all([resC25.json(), resC26.json()]);
           setColab25(Array.isArray(c25) ? c25 : []);
