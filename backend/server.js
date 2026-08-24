@@ -248,7 +248,7 @@ await Promise.all(years.map(async (year) => {
 }));
 
     // ── 3. Colaboradores ────────────────────────────────────────────────────
-for (const periodo of ['2025-1', '2026-1']) {
+for (const periodo of ['2025-1', '2026-2']) {
   try {
     const r = await pool.request()
       .input('periodo', sql.NVarChar, periodo)
@@ -445,7 +445,7 @@ app.get('/api/tablas/:nombre/estructura', async (req, res) => {
 
 // ── Colaboradores: SOLO desde cache ──────────────────────────────────────────
 app.get('/api/colaboradores', async (req, res) => {
-  const periodo = req.query.periodo || '2026-1';
+  const periodo = req.query.periodo || '2026-2';
   const cached = await getCache(`colaboradores:${periodo}`);
   if (cached) return res.json(cached);
   return sendCacheOnly(res, `colaboradores:${periodo}`);

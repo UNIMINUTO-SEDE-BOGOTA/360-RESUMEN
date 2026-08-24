@@ -46,7 +46,7 @@ export interface DashboardChartsProps {
     centro: string;
     centroOperacion: string;
     total: number;
-  } & Record<"FCCO" | "FCEM" | "FCHS" | "FCSA" | "FEBPE" | "FEDU" | "FING", number>)[];
+  } & Record<"FCCO" | "FCEM" | "FCHS" | "FCSA" | "FEDU" | "FING", number>)[];
   virtual2026S1: {
     estado: string;
     nivelAcademico: string;
@@ -58,7 +58,7 @@ export interface DashboardChartsProps {
 
 // ==================== CONSTANTES ====================
 
-const FAC_COLUMNS = ["FCCO", "FCEM", "FCHS", "FCSA", "FEBPE", "FEDU", "FING"] as const;
+const FAC_COLUMNS = ["FCCO", "FCEM", "FCHS", "FCSA", "FEDU", "FING"] as const;
 
 // ==================== HELPERS ====================
 
@@ -426,7 +426,6 @@ export function DashboardCharts({
     FCEM: 0,
     FCHS: 0,
     FCSA: 0,
-    FEBPE: 0,
     FEDU: 0,
     FING: 0,
     total: 0,
@@ -447,7 +446,6 @@ export function DashboardCharts({
       FCEM: Number(h.FCEM || 0),
       FCHS: Number(h.FCHS || 0),
       FCSA: Number(h.FCSA || 0),
-      FEBPE: Number(h.FEBPE || 0),
       FEDU: Number(h.FEDU || 0),
       FING: Number(h.FING || 0),
       total: Number(h.total || 0),

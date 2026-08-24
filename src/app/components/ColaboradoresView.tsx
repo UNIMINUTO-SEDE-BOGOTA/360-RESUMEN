@@ -259,7 +259,7 @@ return (
       <div className="text-sm font-bold">
         SEDE UNIMINUTO BOGOTÁ – COLABORADORES
       </div>
-      <div className="text-xs text-slate-300">2026-1</div>
+      <div className="text-xs text-slate-300">2026-2</div>
     </div>
 
         {/* FILTROS */}

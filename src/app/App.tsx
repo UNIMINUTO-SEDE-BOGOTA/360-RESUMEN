@@ -112,7 +112,7 @@ const mapModalidad = (m?: string): string => {
 const getFacSigla = (fac?: string): string | null => {
   if (!fac) return null;
 
-  const siglas = ["FCCO", "FCEM", "FCHS", "FCSA", "FEBPE", "FEDU", "FING"];
+  const siglas = ["FCCO", "FCEM", "FCHS", "FCSA", "FEDU", "FING"];
   if (siglas.includes(fac.toUpperCase())) return fac.toUpperCase();
 
   const f = fac
@@ -124,7 +124,6 @@ const getFacSigla = (fac?: string): string | null => {
   if (f.includes("empresarial") || f.includes("econom") || f.includes("administracion")) return "FCEM";
   if (f.includes("human") || f.includes("psicologia") || f.includes("comunicacion")) return "FCHS";
   if (f.includes("social aplicada") || f.includes("trabajo social") || f.includes("derecho")) return "FCSA";
-  if (f.includes("bienestar") || f.includes("salud") || f.includes("enfermeria")) return "FEBPE";
   if (f.includes("educacion") || f.includes("licenciatura") || f.includes("pedagogia")) return "FEDU";
   if (f.includes("ingenier") || f.includes("tecnologia") || f.includes("sistemas")) return "FING";
 
@@ -168,7 +167,7 @@ function App() {
     sufijoPeriodos: []
   });
 
-  const fechaCorte = "26 de junio de 2026";
+  const fechaCorte = "24 de Agosto del 2026";
 
   const [activeTab, setActiveTab] = useState("estudiantes");
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
@@ -549,7 +548,7 @@ const buildPareto = (data: any[]) => {
       setByCentro(byCentroOrdenado);
 
       // ── byEscuela ──
-      const FAC_COLUMNS = ["FCCO", "FCEM", "FCHS", "FCSA", "FEBPE", "FEDU", "FING"] as const;
+      const FAC_COLUMNS = ["FCCO", "FCEM", "FCHS", "FCSA", "FEDU", "FING"] as const;
       const facMap: Record<string, Record<string, Record<string, number>>> = {};
 
       rows.forEach(r => {
@@ -567,7 +566,7 @@ const buildPareto = (data: any[]) => {
         if (!facMap[centroUniversitario]) facMap[centroUniversitario] = {};
         if (!facMap[centroUniversitario][centroOperacion]) {
           facMap[centroUniversitario][centroOperacion] = {
-            FCCO: 0, FCEM: 0, FCHS: 0, FCSA: 0, FEBPE: 0, FEDU: 0, FING: 0
+            FCCO: 0, FCEM: 0, FCHS: 0, FCSA: 0, FEDU: 0, FING: 0
           };
         }
         facMap[centroUniversitario][centroOperacion][fac] += valor;
