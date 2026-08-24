@@ -456,17 +456,23 @@ export function DashboardCharts({
 
   padres.forEach((padre) => {
     const children = hijosPorPadre.get(padre.centro) || [];
-    if (children.length === 0) return;
 
     const parentRow = emptyFacRow();
     parentRow.centro = padre.centro;
 
-    children.forEach((child) => {
-      FAC_COLUMNS.forEach((f) => {
-        parentRow[f] += child[f];
+    if (children.length > 0) {
+      children.forEach((child) => {
+        FAC_COLUMNS.forEach((f) => {
+          parentRow[f] += child[f];
+        });
+        parentRow.total += child.total;
       });
-      parentRow.total += child.total;
-    });
+    } else {
+      FAC_COLUMNS.forEach((f) => {
+        parentRow[f] += Number(padre[f] || 0);
+      });
+      parentRow.total = Number(padre.total || 0);
+    }
 
     facTree.push({ parent: { ...parentRow, children } });
   });

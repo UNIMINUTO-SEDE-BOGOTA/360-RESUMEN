@@ -112,20 +112,26 @@ const mapModalidad = (m?: string): string => {
 const getFacSigla = (fac?: string): string | null => {
   if (!fac) return null;
 
+  const raw = fac.trim().toUpperCase();
   const siglas = ["FCCO", "FCEM", "FCHS", "FCSA", "FEDU", "FING"];
-  if (siglas.includes(fac.toUpperCase())) return fac.toUpperCase();
+  if (siglas.includes(raw)) return raw;
+
+  if (raw === "FCEA" || raw === "FCE") return "FCEM";
+  if (raw === "FCS") return "FCSA";
+  if (raw === "FE") return "FEDU";
+  if (raw === "FI") return "FING";
 
   const f = fac
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-  if (f.includes("contable") || f.includes("contaduria")) return "FCCO";
-  if (f.includes("empresarial") || f.includes("econom") || f.includes("administracion")) return "FCEM";
-  if (f.includes("human") || f.includes("psicologia") || f.includes("comunicacion")) return "FCHS";
-  if (f.includes("social aplicada") || f.includes("trabajo social") || f.includes("derecho")) return "FCSA";
-  if (f.includes("educacion") || f.includes("licenciatura") || f.includes("pedagogia")) return "FEDU";
-  if (f.includes("ingenier") || f.includes("tecnologia") || f.includes("sistemas")) return "FING";
+  if (f.includes("contable") || f.includes("contaduria") || f.includes("finanz")) return "FCCO";
+  if (f.includes("empresarial") || f.includes("econom") || f.includes("administra") || f.includes("negocio")) return "FCEM";
+  if (f.includes("human") || f.includes("psicolog") || f.includes("comunicac") || f.includes("filosof") || f.includes("teolog")) return "FCHS";
+  if (f.includes("social") || f.includes("trabajo social") || f.includes("derecho") || f.includes("salud") || f.includes("enferm")) return "FCSA";
+  if (f.includes("educacion") || f.includes("licenciatura") || f.includes("pedagog")) return "FEDU";
+  if (f.includes("ingenier") || f.includes("tecnolog") || f.includes("sistema") || f.includes("software") || f.includes("informat")) return "FING";
 
   return null;
 };
@@ -616,6 +622,9 @@ const buildPareto = (data: any[]) => {
         totalRow.total += totalGeneral[c];
       });
       escuelaRows.push(totalRow);
+
+      setByEscuela(escuelaRows);
+
       // ── Ausentismo ──
       const ausMap: Record<string, { ausentes: number; desertores: number; tasaAusentismo: number[]; tasaDesercion: number[]; total: number }> = {};
 
