@@ -11,13 +11,27 @@ app.use(cors());
 app.use(express.json());
 let ALLOW_DB = false;
 
-// ==================== UPSTASH REDIS ====================
-const redis = new Redis({
-  url:   process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+// ==================== UPSTASH REDIS (Opcional) ====================
+let redis = null;
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || '';
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || '';
 
-// Cache en memoria (capa rápida sobre Redis)
+if (redisUrl.startsWith('https://') && redisToken && !redisUrl.includes('tu-url')) {
+  try {
+    redis = new Redis({
+      url: redisUrl,
+      token: redisToken,
+    });
+    console.log('✅ Conectado a Upstash Redis');
+  } catch (e) {
+    console.warn('⚠️ Error al inicializar Upstash Redis:', e.message);
+    redis = null;
+  }
+} else {
+  console.log('ℹ️  Modo de caché: solo memoria local (sin Upstash Redis).');
+}
+
+// Cache en memoria (capa rápida sobre Redis o standalone)
 const memCache = new Map();
 const MEM_TTL = 1000 * 60 * 60 * 24 * 30;
 
@@ -35,6 +49,7 @@ function setMemCache(key, data) {
 async function getCache(key) {
   const mem = getMemCache(key);
   if (mem !== null) return mem;
+  if (!redis) return null;
   try {
     const val = await redis.get(key);
     if (val !== null) {
@@ -50,6 +65,7 @@ async function getCache(key) {
 
 async function setCache(key, data) {
   setMemCache(key, data);
+  if (!redis) return;
   try {
     await redis.set(key, JSON.stringify(data));
     console.log(`🟣 Guardado en Redis: ${key}`);
@@ -60,6 +76,10 @@ async function setCache(key, data) {
 
 async function clearAllCache() {
   memCache.clear();
+  if (!redis) {
+    console.log('🗑️ Caché en memoria limpiado');
+    return;
+  }
   try {
     const keys = await redis.keys('*');
     if (keys.length > 0) {
@@ -74,6 +94,7 @@ async function clearAllCache() {
 }
 
 async function loadCacheFromRedis() {
+  if (!redis) return;
   try {
     const keys = await redis.keys('*');
     if (!keys.length) {
@@ -248,7 +269,7 @@ await Promise.all(years.map(async (year) => {
 }));
 
     // ── 3. Colaboradores ────────────────────────────────────────────────────
-for (const periodo of ['2025-1', '2026-2']) {
+    for (const periodo of ['2025-2', '2026-2']) {
   try {
     const r = await pool.request()
       .input('periodo', sql.NVarChar, periodo)
@@ -332,7 +353,7 @@ for (const periodo of ['2025-1', '2026-2']) {
     FROM [Poblacion_Estudiantil2]
     WHERE ${buildRectoriaFilter()}
       AND [Año] IN (2025, 2026)
-      AND [Periodo] IN ('S1', 'Q2')
+      AND [Periodo] IN ('S2', 'Q2')
     GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación], [Periodo], [Centro Universitario]
   `);
   await setCache('comparativos:all', r.recordset);
@@ -350,7 +371,7 @@ for (const periodo of ['2025-1', '2026-2']) {
     } catch (e) { console.warn('⚠️ Error tablas:', e.message); }
 
     // ── 7. Marcar cache como listo ───────────────────────────────────────────
-    await redis.set('cache:ready', 'true');
+    await setCache('cache:ready', 'true');
     console.log('✅ Cache completo cargado correctamente');
     return true;
 
@@ -365,14 +386,14 @@ for (const periodo of ['2025-1', '2026-2']) {
 // ── Cache: limpiar ──────────────────────────────────────────────────────────
 app.post('/api/cache/clear', async (_req, res) => {
   await clearAllCache();
-  res.json({ message: 'Cache limpiado (memoria + Redis)', entries: 0 });
+  res.json({ message: 'Cache limpiado', entries: 0 });
 });
 
 // ── Cache: info ─────────────────────────────────────────────────────────────
 app.get('/api/cache/info', async (_req, res) => {
   try {
-    const keys = await redis.keys('*');
-    res.json({ memEntries: memCache.size, redisEntries: keys.length, dbConnected });
+    const keys = redis ? await redis.keys('*') : [];
+    res.json({ memEntries: memCache.size, redisEntries: redis ? keys.length : 'disabled', dbConnected });
   } catch (err) {
     res.json({ memEntries: memCache.size, redisEntries: 'error', error: err.message });
   }
@@ -385,8 +406,9 @@ app.get('/api/cache/warmup-status', (_req, res) => {
 
 // ── Cache: warmup (ÚNICO punto que activa Azure) ────────────────────────────
 app.post('/api/cache/warmup', async (req, res) => {
-  const adminKey = req.headers['x-admin-key'];
-  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+  const adminKey = (req.headers['x-admin-key'] || '').toString().trim().replace(/^"|"$/g, '');
+  const secretKey = (process.env.ADMIN_SECRET_KEY || 'Herta').toString().trim().replace(/^"|"$/g, '');
+  if (adminKey !== secretKey) {
     return res.status(401).json({ error: 'No autorizado' });
   }
 
@@ -396,7 +418,8 @@ app.post('/api/cache/warmup', async (req, res) => {
     ALLOW_DB = true;
     await connectDB();
     await clearAllCache();
-    await redis.del('cache:ready');
+    if (redis) await redis.del('cache:ready');
+    memCache.delete('cache:ready');
     warmupDone = false;
 
     const ok = await warmupCacheDirect();
@@ -473,7 +496,7 @@ app.get('/api/datos/:tabla', async (req, res) => {
     return res.json({ rows: [] });
   }
 
-  const ready = await redis.get('cache:ready');
+  const ready = await getCache('cache:ready');
   if (!ready) {
     return res.json({
       rows: [], loading: true, status: 'warming_up',

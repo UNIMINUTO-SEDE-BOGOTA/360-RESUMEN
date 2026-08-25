@@ -231,12 +231,13 @@ export default function ColaboradoresView() {
     const map: Record<string, number> = {};
     filteredRows.forEach(r => {
       const tipo = r.tipoContrato || "Sin información";
-      const duracion = r.duracionContrato || "";
-  
-      const key = duracion === "1 Año o Más" || tipo.toLowerCase().includes("indefinido")
+      const duracion = (r.duracionContrato || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const normTipo = tipo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      const key = (duracion.includes("1 a") || duracion.includes("mas") || normTipo.includes("indefinido"))
         ? "Contrato Indefinido"
         : tipo;
-  
+
       map[key] = (map[key] || 0) + (r.total || 0);
     });
     return Object.entries(map).map(([name, value]) => ({

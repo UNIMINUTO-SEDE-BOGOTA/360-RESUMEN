@@ -41,6 +41,32 @@ const ORDEN_FORMACION = [
   "Maestría",
 ];
 
+const ORDEN_DURACION = [
+  "1 Año o Más",
+  "7 a 11 meses",
+  "6 meses",
+  "Menos de 6 meses",
+  "Sin información",
+];
+
+function normalizeDuracion(d?: string): string {
+  if (!d) return "Sin información";
+  const clean = d.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (clean.includes("1 a") || clean.includes("mas") || clean.includes("ano o mas") || clean.includes("1 ano")) {
+    return "1 Año o Más";
+  }
+  if (clean.includes("7 a 11") || clean.includes("7-11") || clean.includes("7 a 11 meses")) {
+    return "7 a 11 meses";
+  }
+  if (clean.includes("6 mes") || clean === "6 meses") {
+    return "6 meses";
+  }
+  if (clean.includes("menos") || clean.includes("menor")) {
+    return "Menos de 6 meses";
+  }
+  return d.trim();
+}
+
 interface CompRow {
   Año: number;
   Periodo: string;   
@@ -176,7 +202,7 @@ export default function ComparativosView() {
         // 2️⃣ Colaboradores
         try {
           const [resC25, resC26] = await Promise.all([
-            fetch(`${API_URL}/api/colaboradores?periodo=2025-1`),
+            fetch(`${API_URL}/api/colaboradores?periodo=2025-2`),
             fetch(`${API_URL}/api/colaboradores?periodo=2026-2`),
           ]);
           const [c25, c26] = await Promise.all([resC25.json(), resC26.json()]);
@@ -274,18 +300,38 @@ const ofertaAcademica = useMemo(() => {
     }).length;
   }, [ofertaRows]);
 
+  // ── HELPER TIEMPO COMPLETO ─────────────────
+  const isTiempoCompleto = (d?: string) => {
+    const norm = (d || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return norm.includes("tiempo completo") || norm.includes("1.tiempo");
+  };
+
   // ── PROFESORES TC ──────────────────────────
-  const profTC25 = useMemo(() => colab25.filter((r) => r.tipo === "Profesores"), [colab25]);
-  const profTC26 = useMemo(() => colab26.filter((r) => r.tipo === "Profesores"), [colab26]);
+  const profTC25 = useMemo(() => colab25.filter((r) => r.tipo === "Profesores" && isTiempoCompleto(r.dedicacion)), [colab25]);
+  const profTC26 = useMemo(() => colab26.filter((r) => r.tipo === "Profesores" && isTiempoCompleto(r.dedicacion)), [colab26]);
 
   interface ProfRow { label: string; v25: number; v26: number }
 
   const profTCRows = useMemo((): ProfRow[] => {
     const map25: Record<string, number> = {};
     const map26: Record<string, number> = {};
-    profTC25.forEach((r) => { const k = r.duracionContrato || "Sin información"; map25[k] = (map25[k] || 0) + (r.total || 0); });
-    profTC26.forEach((r) => { const k = r.duracionContrato || "Sin información"; map26[k] = (map26[k] || 0) + (r.total || 0); });
-    const keys = [...new Set([...Object.keys(map25), ...Object.keys(map26)])].sort();
+    profTC25.forEach((r) => {
+      const k = normalizeDuracion(r.duracionContrato);
+      map25[k] = (map25[k] || 0) + (r.total || 0);
+    });
+    profTC26.forEach((r) => {
+      const k = normalizeDuracion(r.duracionContrato);
+      map26[k] = (map26[k] || 0) + (r.total || 0);
+    });
+    const allKeys = [...new Set([...Object.keys(map25), ...Object.keys(map26)])];
+    const keys = allKeys.sort((a, b) => {
+      const ia = ORDEN_DURACION.indexOf(a);
+      const ib = ORDEN_DURACION.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b, "es");
+    });
     return keys.map((k) => ({ label: k, v25: map25[k] || 0, v26: map26[k] || 0 }));
   }, [profTC25, profTC26]);
 
@@ -293,24 +339,38 @@ const ofertaAcademica = useMemo(() => {
   const profTCTotal26 = profTCRows.reduce((s, r) => s + r.v26, 0);
 
   // ── COLABORADORES TC ───────────────────────
-  const colabTC25 = useMemo(() => colab25.filter((r) => r.tipo === "Gestión Académica"), [colab25]);
-  const colabTC26 = useMemo(() => colab26.filter((r) => r.tipo === "Gestión Académica"), [colab26]);
+  const colabTC25 = useMemo(() => colab25.filter((r) => r.tipo === "Gestión Académica" && isTiempoCompleto(r.dedicacion)), [colab25]);
+  const colabTC26 = useMemo(() => colab26.filter((r) => r.tipo === "Gestión Académica" && isTiempoCompleto(r.dedicacion)), [colab26]);
 
   interface ColabTCRow { label: string; v25: number; v26: number }
 
   const colabTCRows = useMemo((): ColabTCRow[] => {
     const map25: Record<string, number> = {};
     const map26: Record<string, number> = {};
-    colabTC25.forEach((r) => { const k = r.duracionContrato || "Sin información"; map25[k] = (map25[k] || 0) + (r.total || 0); });
-    colabTC26.forEach((r) => { const k = r.duracionContrato || "Sin información"; map26[k] = (map26[k] || 0) + (r.total || 0); });
-    const keys = [...new Set([...Object.keys(map25), ...Object.keys(map26)])].sort();
+    colabTC25.forEach((r) => {
+      const k = normalizeDuracion(r.duracionContrato);
+      map25[k] = (map25[k] || 0) + (r.total || 0);
+    });
+    colabTC26.forEach((r) => {
+      const k = normalizeDuracion(r.duracionContrato);
+      map26[k] = (map26[k] || 0) + (r.total || 0);
+    });
+    const allKeys = [...new Set([...Object.keys(map25), ...Object.keys(map26)])];
+    const keys = allKeys.sort((a, b) => {
+      const ia = ORDEN_DURACION.indexOf(a);
+      const ib = ORDEN_DURACION.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b, "es");
+    });
     return keys.map((k) => ({ label: k, v25: map25[k] || 0, v26: map26[k] || 0 }));
   }, [colabTC25, colabTC26]);
 
   const colabTCTotal25 = colabTCRows.reduce((s, r) => s + r.v25, 0);
   const colabTCTotal26 = colabTCRows.reduce((s, r) => s + r.v26, 0);
 
-  // ── ESTUDIANTES TOTALES S1Q2 ───────────────
+  // ── ESTUDIANTES TOTALES S2Q2 ───────────────
   interface SubItem { label: string; v25: number; v26: number }
   interface NivelGroup { nivel: string; subniveles: SubItem[]; v25: number; v26: number }
 
@@ -419,8 +479,8 @@ const ofertaAcademica = useMemo(() => {
       <thead>
         <tr>
           <th className={`${thClass} text-left`}>PROFESORES</th>
-          <th className={thClass}>2025–1</th>
-          <th className={thClass}>2026–1</th>
+          <th className={thClass}>2025–2</th>
+          <th className={thClass}>2026–2</th>
           <th className={thClass}>Variación</th>
           <th className={thClass}>%</th>
         </tr>
@@ -450,7 +510,7 @@ const ofertaAcademica = useMemo(() => {
     {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
   </Panel>
 
-  <Panel title="ESTUDIANTES TOTALES – S1Q2" defaultOpen={false}>
+  <Panel title="ESTUDIANTES TOTALES – S2Q2" defaultOpen={false}>
     <table className="w-full text-xs border-collapse table-auto">
       <thead>
         <tr>
@@ -515,12 +575,12 @@ const ofertaAcademica = useMemo(() => {
 
 
           <div className="border rounded-md bg-white p-3 text-center">
-            <div className="text-[10px] text-gray-500 mb-0.5">Colaboradores 2026–1</div>
+            <div className="text-[10px] text-gray-500 mb-0.5">Colaboradores 2026–2</div>
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : f(totalColab26)}</div>
           </div>
 
           <div className="border rounded-md bg-white p-3 text-center">
-            <div className="text-[10px] text-gray-500 mb-0.5">Estudiantes S1–Q2</div>
+            <div className="text-[10px] text-gray-500 mb-0.5">Estudiantes S2–Q2</div>
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : f(totalEst26)}</div>
           </div>
 
@@ -546,8 +606,8 @@ const ofertaAcademica = useMemo(() => {
               <thead>
                 <tr>
                   <th className={`${thClass} text-left`}>Gestión Académica</th>
-                  <th className={thClass}>2025–1</th>
-                  <th className={thClass}>2026–1</th>
+                  <th className={thClass}>2025–2</th>
+                  <th className={thClass}>2026–2</th>
                   <th className={thClass}>Variación</th>
                   <th className={thClass}>%</th>
                 </tr>
@@ -578,7 +638,7 @@ const ofertaAcademica = useMemo(() => {
             </Panel>
 
           {/* Estudiantes Modalidad */}
-  <Panel title="ESTUDIANTES MODALIDAD – S1Q2" defaultOpen={false}>
+  <Panel title="ESTUDIANTES MODALIDAD – S2Q2" defaultOpen={false}>
     <table className="w-full text-xs border-collapse table-auto">
               <thead>
                 <tr>
