@@ -114,6 +114,7 @@ const getFacSigla = (fac?: string): string | null => {
 
   const raw = fac.trim().toUpperCase();
   const siglas = ["FCCO", "FCEM", "FCHS", "FCSA", "FEDU", "FING"];
+  if (siglas.includes(fac.toUpperCase())) return fac.toUpperCase();
   if (siglas.includes(raw)) return raw;
 
   if (raw === "FCEA" || raw === "FCE") return "FCEM";
@@ -126,6 +127,12 @@ const getFacSigla = (fac?: string): string | null => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  if (f.includes("contable") || f.includes("contaduria")) return "FCCO";
+  if (f.includes("empresarial") || f.includes("econom") || f.includes("administracion")) return "FCEM";
+  if (f.includes("human") || f.includes("psicologia") || f.includes("comunicacion")) return "FCHS";
+  if (f.includes("social aplicada") || f.includes("trabajo social") || f.includes("derecho")) return "FCSA";
+  if (f.includes("educacion") || f.includes("licenciatura") || f.includes("pedagogia")) return "FEDU";
+  if (f.includes("ingenier") || f.includes("tecnologia") || f.includes("sistemas")) return "FING";
   if (f.includes("contable") || f.includes("contaduria") || f.includes("finanz")) return "FCCO";
   if (f.includes("empresarial") || f.includes("econom") || f.includes("administra") || f.includes("negocio")) return "FCEM";
   if (f.includes("human") || f.includes("psicolog") || f.includes("comunicac") || f.includes("filosof") || f.includes("teolog")) return "FCHS";
@@ -183,7 +190,7 @@ function App() {
   const [dashYears, setDashYears] = useState<string[]>([]);
   const [dashModalidades, setDashModalidades] = useState<string[]>([]);
   const [dashNiveles, setDashNiveles] = useState<string[]>([]);
-  const [dashPeriodos, setDashPeriodos] = useState<string[]>([]);
+  const [dashPeriodos, setDashPeriodos] = useState<string[]>(["Q2", "S2"]);
   const [dashCentros, setDashCentros] = useState<string[]>([]);
   
   // PARETO EJECUTADO
@@ -451,6 +458,10 @@ const buildPareto = (data: any[]) => {
     setErr(null);
 
     try {
+
+      console.log("base.years:", base.years);
+      console.log("dashYears:", dashYears);
+
       const res = await fetchTableMulti({
         years: dashYears.length ? dashYears : [base.years[0]],   // ← dash*
         modalidades: dashModalidades,
@@ -461,6 +472,24 @@ const buildPareto = (data: any[]) => {
       });
 
       const rows = res.rows;
+
+      console.log("FILAS:", rows);
+
+      console.log(
+        "FACULTADES:",
+        [...new Set(rows.map(r => r.facultad))]
+      );
+      
+      console.log(
+        "TOTAL POR FACULTAD:",
+        Object.entries(
+          rows.reduce((acc, r) => {
+            const facultad = r.facultad || "SIN FACULTAD";
+            acc[facultad] = (acc[facultad] || 0) + (r.totales ?? 0);
+            return acc;
+          }, {} as Record<string, number>)
+        )
+      );
 
       console.log("🔍 rows recibidos:", rows.length, rows[0]);
 
@@ -858,7 +887,7 @@ const clearDash = () => {
   setDashYears([base.years[0] ?? "2026"]);
   setDashModalidades([]);
   setDashNiveles([]);
-  setDashPeriodos([]);
+  setDashPeriodos(["Q2", "S2"]);
   setDashCentros([]);
 };
 

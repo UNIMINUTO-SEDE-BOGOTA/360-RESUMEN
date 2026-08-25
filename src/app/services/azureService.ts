@@ -131,57 +131,88 @@ export async function fetchTableMulti(
 
   const yearsCsv = toCsv(f.years);
   if (yearsCsv) qs.set('years', yearsCsv);
-  qs.set('page',     String(f.page     ?? 1));
+  qs.set('page', String(f.page ?? 1));
   qs.set('pageSize', String(f.pageSize ?? 20000));
-  qs.set('_ts',      String(Date.now()));
+  qs.set('_ts', String(Date.now()));
 
   const url = `${API_URL}/api/datos/${TABLE}?${qs.toString()}`;
   const raw = await safeFetch(url);
   if (!raw) return { total: 0, rows: [] };
 
+  // Normalización
+  const norm = (s: string) =>
+    (s ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
   let rows = raw.map(mapRow);
 
+  // Excluir FEBPE
+  rows = rows.filter(r => norm(r.facultad) !== 'febpe');
+
   // ── Filtros en frontend ──────────────────────────────────────────
-  const norm = (s: string) =>
-    (s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
   if (f.modalidades?.length)
-    rows = rows.filter(r => f.modalidades!.some(m => norm(r.categoria) === norm(m)));
+    rows = rows.filter(r =>
+      f.modalidades!.some(m => norm(r.categoria) === norm(m))
+    );
 
   if (f.niveles?.length)
-    rows = rows.filter(r => f.niveles!.includes(normalizeNivel(r.nivelAcademico)));
+    rows = rows.filter(r =>
+      f.niveles!.includes(normalizeNivel(r.nivelAcademico))
+    );
 
   const has2026 = f.years?.includes('2026');
-  const periodosEfectivos: string[] = f.periodos?.length
-    ? f.periodos
-    : has2026 ? ['S1', 'Q2'] : [];
 
-  if (periodosEfectivos.length)
-    rows = rows.filter(r => {
-    // Para filas de 2026 sin período manual: aplicar S1+Q2
-      if (!f.periodos?.length && has2026 && r.fecha === '2026')
-        return norm(r.periodo) === 's1' || norm(r.periodo) === 'q2';
-    // Para otros años o cuando hay período manual: filtro normal
-      return periodosEfectivos.some(p => norm(r.periodo) === norm(p));
-    });
+  const periodosEfectivos: string[] = f.periodos?.length
+  ? f.periodos
+  : ['Q2', 'S2'];
+
+  if (periodosEfectivos.length) {
+    rows = rows.filter(r =>
+      periodosEfectivos.some(
+        p => norm(r.periodo) === norm(p)
+      )
+    );
+  }
 
   if (f.centros?.length)
-    rows = rows.filter(r => f.centros!.some(c => norm(r.centro ?? '') === norm(c)));
+    rows = rows.filter(r =>
+      f.centros!.some(c => norm(r.centro ?? '') === norm(c))
+    );
 
   if (f.nivelesFormacion?.length)
-    rows = rows.filter(r => f.nivelesFormacion!.some(n => norm(r.nivelFormacion ?? '') === norm(n)));
+    rows = rows.filter(r =>
+      f.nivelesFormacion!.some(
+        n => norm(r.nivelFormacion ?? '') === norm(n)
+      )
+    );
 
   if (f.periodicidades?.length)
-    rows = rows.filter(r => f.periodicidades!.some(p => norm(r.periodicidad ?? '') === norm(p)));
+    rows = rows.filter(r =>
+      f.periodicidades!.some(
+        p => norm(r.periodicidad ?? '') === norm(p)
+      )
+    );
 
   if (f.facultades?.length)
-    rows = rows.filter(r => f.facultades!.some(fc => norm(r.facultad ?? '') === norm(fc)));
+    rows = rows.filter(r =>
+      f.facultades!.some(
+        fc => norm(r.facultad ?? '') === norm(fc)
+      )
+    );
 
   if (f.sedes?.length)
-    rows = rows.filter(r => f.sedes!.some(s => norm(r.rectoria ?? '') === norm(s)));
+    rows = rows.filter(r =>
+      f.sedes!.some(s => norm(r.rectoria ?? '') === norm(s))
+    );
 
   if (f.programas?.length)
-    rows = rows.filter(r => f.programas!.some(p => norm(r.programa ?? '') === norm(p)));
+    rows = rows.filter(r =>
+      f.programas!.some(p => norm(r.programa ?? '') === norm(p))
+    );
 
   return { total: rows.length, rows };
 }
