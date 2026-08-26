@@ -348,12 +348,13 @@ await Promise.all(years.map(async (year) => {
       [Nivel Académico],
       [Nivel de Formación],
       [Periodo],
-      [Centro Universitario], 
+      [Centro Universitario],
       SUM([Estudiantes Totales]) AS total
     FROM [Poblacion_Estudiantil2]
     WHERE ${buildRectoriaFilter()}
       AND [Año] IN (2025, 2026)
       AND [Periodo] IN ('S2', 'Q2')
+      AND [Facultad] IN ('FCHS', 'FEDU', 'FING', 'FCEM', 'FCSA', 'FCCO')
     GROUP BY [Año], [Modalidad], [Nivel Académico], [Nivel de Formación], [Periodo], [Centro Universitario]
   `);
   await setCache('comparativos:all', r.recordset);
