@@ -37,7 +37,7 @@ const DEDICACION_COLORS: Record<string, string> = {
 };
 
 const ESCALAFON_COLORS = [
-  "#f4e97a", "#f4c87a", "#7bb8f4",
+  "#d3c101", "#f4c87a", "#7bb8f4",
   "#f4a97a", "#b4d4f4", "#d4b4f4", "#f47a7a"
 ];
 
@@ -197,19 +197,20 @@ export default function ColaboradoresView() {
   // DEDICACIÓN (STACKED)
   const dedicacionData = useMemo(() => {
     const map: any = {};
+
     filteredRows.forEach(r => {
       const ded = normalizeDedicacion(r.dedicacion);
-      const mod = normalizeModalidad(r.modalidad);
+
       if (!map[ded]) {
         map[ded] = {
           name: ded,
-          "1.Presencial": 0,
-          "2.Distancia": 0,
-          "Sin información": 0
+          total: 0
         };
       }
-      map[ded][mod] += r.total || 0;
+
+      map[ded].total += r.total || 0;
     });
+
     return Object.values(map);
   }, [filteredRows]);
 
@@ -365,20 +366,18 @@ return (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={dedicacionData}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="name" tick={{ fontSize: 8 }} />
-            <YAxis tick={{ fontSize: 8 }} />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
             <Tooltip />
-            <Legend />
-            {["1.Presencial","2.Distancia","Sin información"].map(k => (
-              <Bar key={k} dataKey={k} stackId="a" fill={DEDICACION_COLORS[k]}>
-                <LabelList
-                  dataKey={k}
-                  position="insideTop"
-                  style={{ fontSize: 9, fill: "#1e293b", fontWeight: 600 }}
-                  formatter={(v: number) => v > 0 ? v : ""}
-                />
-              </Bar>
-            ))}
+
+            <Bar dataKey="total" fill="#d0fda7">
+              <LabelList
+                dataKey="total"
+                position="top"
+                style={{ fontSize: 12, fill: "#1e293b", fontWeight: 600 }}
+                formatter={(v: number) => (v > 0 ? v : "")}
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
