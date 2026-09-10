@@ -275,24 +275,27 @@ await Promise.all(years.map(async (year) => {
       .input('periodo', sql.NVarChar, periodo)
       .query(`
         SELECT
-          [Modalidad]                          AS modalidad,
-          [Género]                             AS genero,
-          [Tipo de trabajador]                 AS tipo,
-          [Máximo nivel de formación obtenido] AS nivelFormacion,
-          [Dedicación]                         AS dedicacion,
-          [Categoría en el escalafón docente]  AS escalafon,
-          [Tipo de contrato]                   AS tipoContrato,
-          [Duración del contrato]              AS duracionContrato,
-          [Numero de trabajadores]             AS total,
-          [Periodo]                            AS periodo,
-          [Rectoría]                           AS rectoria
+            [Modalidad]                          AS modalidad,
+            [Género]                             AS genero,
+            [Tipo de trabajador]                 AS tipo,
+            [Máximo nivel de formación obtenido] AS nivelFormacion,
+            [Dedicación]                         AS dedicacion,
+            [Categoría en el escalafón docente]  AS escalafon,
+            [Tipo de contrato]                   AS tipoContrato,
+            [Duración del contrato]              AS duracionContrato,
+            [Numero de trabajadores]             AS total,
+            [Periodo]                            AS periodo,
+            [Rectoría]                           AS rectoria
         FROM Colaboradores
-        WHERE LOWER(LTRIM(RTRIM(
-          REPLACE(REPLACE(REPLACE(REPLACE(
-            CONVERT(NVARCHAR(200), [Rectoría] COLLATE Latin1_General_CI_AI),
-          'á','a'),'é','e'),'í','i'),'ó','o')
-        ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
-        AND [Periodo] = @periodo
+        WHERE
+            LTRIM(RTRIM([Rectoría])) COLLATE Latin1_General_CI_AI IN (
+                'bogota',
+                'sede bogota',
+                'rectoria bogota',
+                'bogota d.c.'
+            )
+            AND [Cursos Nacionales] <> 'Cursos Nacionales'
+            AND [Periodo] = @periodo;
       `);
     await setCache(`colaboradores:${periodo}`, r.recordset);
     console.log(`✅ colaboradores:${periodo} → ${r.recordset.length}`);
