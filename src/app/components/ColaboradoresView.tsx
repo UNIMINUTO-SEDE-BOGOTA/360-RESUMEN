@@ -41,6 +41,11 @@ const ESCALAFON_COLORS = [
   "#f4a97a", "#b4d4f4", "#d4b4f4", "#f47a7a"
 ];
 
+
+const COLORES_DEDICACION = [
+  "#f47a7a", "#f4c87a", "#7bb8f4"
+]
+
 const CONTRATO_COLORS = ["#f4a97a", "#7bc8d4", "#c4a3d4", "#f4c87a"];
 
 // ─────────────────────────────────────────────
@@ -370,11 +375,22 @@ return (
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip />
 
-            <Bar dataKey="total" fill="#d0fda7">
+            <Bar dataKey="total">
+              {dedicacionData.map((item, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORES_DEDICACION[index % COLORES_DEDICACION.length]}
+                />
+              ))}
+
               <LabelList
                 dataKey="total"
                 position="top"
-                style={{ fontSize: 12, fill: "#1e293b", fontWeight: 600 }}
+                style={{
+                  fontSize: 12,
+                  fill: "#1e293b",
+                  fontWeight: 600,
+                }}
                 formatter={(v: number) => (v > 0 ? v : "")}
               />
             </Bar>
