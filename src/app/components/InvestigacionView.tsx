@@ -1,5 +1,6 @@
 // src/components/InvestigacionView.tsx
 import { useState, useEffect, useRef } from "react";
+import { DownloadableChart } from "./DownloadableChart";
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
@@ -228,6 +229,7 @@ export function InvestigacionView() {
 
       {/* ── TAB: GRUPOS ── */}
       {tab === "grupos" && (
+        <DownloadableChart fileName="Investigación - grupos categorizados">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{
             display: "grid",
@@ -320,10 +322,12 @@ export function InvestigacionView() {
             </div>
           </div>
         </div>
+        </DownloadableChart>
       )}
 
       {/* ── TAB: INVESTIGADORES ── */}
       {tab === "investigadores" && (
+        <DownloadableChart fileName="Investigación - investigadores">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{
             display: "grid",
@@ -429,6 +433,7 @@ export function InvestigacionView() {
             </div>
           </div>
         </div>
+        </DownloadableChart>
       )}
 
       {/* ── TAB: PATENTES ── */}

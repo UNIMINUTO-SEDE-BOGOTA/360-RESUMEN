@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList
 } from "recharts";
+import { DownloadableChart } from "./DownloadableChart";
 import { DropdownMulti } from "./FiltersMulti";
 import { Panel } from "./Panel"; 
 
@@ -227,9 +228,10 @@ export default function ColaboradoresView() {
       if (!esc) return; // 👈 ignorar “sin clasificar”
       map[esc] = (map[esc] || 0) + (r.total || 0);
     });
-    return ESCALAFON_ORDER
-      .filter(e => map[e])
-      .map(e => ({ name: e, valor: map[e] }));
+    return ESCALAFON_ORDER.map(e => ({
+      name: e,
+      valor: map[e] || 0,
+    }));
   }, [filteredRows]);
 
   // CONTRATO
@@ -367,8 +369,9 @@ return (
 
     {/* DEDICACIÓN */}
     <Panel title="Colaboradores por dedicación" defaultOpen={false}>
-      <div className="p-2 h-52">
-        <ResponsiveContainer width="100%" height="100%">
+      <DownloadableChart fileName="Colaboradores por dedicación">
+        <div className="p-2 h-52">
+          <ResponsiveContainer width="100%" height="100%">
           <BarChart data={dedicacionData}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="name" tick={{ fontSize: 12 }} />
@@ -395,8 +398,9 @@ return (
               />
             </Bar>
           </BarChart>
-        </ResponsiveContainer>
-      </div>
+          </ResponsiveContainer>
+        </div>
+      </DownloadableChart>
     </Panel>
 
   </div>
@@ -406,28 +410,47 @@ return (
 
     {/* ESCALAFÓN */}
     <Panel title="Escalafón docente" defaultOpen={false}>
-      <div className="p-2 h-56">
-        <ResponsiveContainer width="100%" height="100%">
+      <DownloadableChart fileName="Escalafón docente">
+        <div className="p-2 h-56">
+          <ResponsiveContainer width="100%" height="100%">
           <BarChart data={escalafonData} margin={{ top: 35, right: 10, left: 0, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="name" tick={{ fontSize: 8 }} />
-            <YAxis tick={{ fontSize: 8 }} />
+            <XAxis
+              dataKey="name"
+              interval={0}
+              angle={-30}
+              textAnchor="end"
+              height={55}
+              tick={{ fontSize: 11 }}
+            />
+            <YAxis tick={{ fontSize: 13 }} />
             <Tooltip />
             <Bar dataKey="valor">
               {escalafonData.map((_, i) => (
                 <Cell key={i} fill={ESCALAFON_COLORS[i % ESCALAFON_COLORS.length]} />
               ))}
-              <LabelList dataKey="valor" position="top" offset={10} />
+              <LabelList
+                dataKey="valor"
+                position="top"
+                style={{
+                  fontSize: 12,
+                  fill: "#1e293b",
+                  fontWeight: 600,
+                }}
+                formatter={(v: number) => (v > 0 ? v : "")}
+              />            
             </Bar>
           </BarChart>
-        </ResponsiveContainer>
-      </div>
+          </ResponsiveContainer>
+        </div>
+      </DownloadableChart>
     </Panel>
 
     {/* CONTRATO */}
     <Panel title="Tipo de contrato" defaultOpen={false}>
-      <div className="p-2 h-56">
-        <ResponsiveContainer width="100%" height="100%">
+      <DownloadableChart fileName="Tipo de contrato">
+        <div className="p-2 h-56">
+          <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={contratoData}
@@ -452,8 +475,9 @@ return (
             <Tooltip />
             <Legend />
           </PieChart>
-        </ResponsiveContainer>
-      </div>
+          </ResponsiveContainer>
+        </div>
+      </DownloadableChart>
     </Panel>
 
   </div>

@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import { DownloadableChart } from "./DownloadableChart";
 import { DropdownMulti } from "./FiltersMulti";
 
 const API_URL =
@@ -251,8 +252,9 @@ export function OfertaView({ fechaCorte = "20 de febrero de 2026" }: Props) {
               </div>
 
               {/* GRÁFICA — torta en ambas vistas */}
-              <div className="md:pl-[168px] pl-2 pr-4 pt-4 pb-2" style={{ height: 380 }}>
-                {barras.length === 0 ? (
+              <DownloadableChart fileName="Programas por nivel académico">
+                <div className="md:pl-[168px] pl-2 pr-4 pt-4 pb-2" style={{ height: 380 }}>
+                  {barras.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-slate-400 text-[12px]">
                     Sin resultados para los filtros seleccionados
                   </div>
@@ -277,8 +279,9 @@ export function OfertaView({ fechaCorte = "20 de febrero de 2026" }: Props) {
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
-                )}
-              </div>
+                  )}
+                </div>
+              </DownloadableChart>
             </div>
           </div>
 

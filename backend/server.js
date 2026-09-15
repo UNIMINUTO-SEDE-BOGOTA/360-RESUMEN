@@ -336,7 +336,7 @@ await Promise.all(years.map(async (year) => {
           REPLACE(REPLACE(REPLACE(REPLACE(
             CONVERT(NVARCHAR(200), [RECTORÍA DUEÑA DEL PROGRAMA] COLLATE Latin1_General_CI_AI),
           'á','a'),'é','e'),'í','i'),'ó','o')
-        ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.')
+        ))) IN ('bogota', 'sede bogota', 'rectoria bogota', 'bogota d.c.', 'rectoria bogota, cundinamarca y boyaca')
       `);
       await setCache('oferta:all', r.recordset);
       console.log(`✅ oferta:all → ${r.recordset.length}`);

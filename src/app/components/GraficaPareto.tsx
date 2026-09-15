@@ -4,6 +4,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ResponsiveContainer, Cell, Legend
 } from "recharts";
+import { DownloadableChart } from "./DownloadableChart";
 
 interface Props {
   titulo: string;
@@ -16,13 +17,14 @@ export function GraficaPareto({ titulo, colorHeader, data }: Props) {
   const [highlightLine, setHighlightLine] = useState(false);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-      <div className={`${colorHeader} text-white text-xs px-3 py-2 font-medium`}>
-        {titulo}
-      </div>
-      <div className="p-2 overflow-x-auto">
-        <div style={{ minWidth: "520px" }}>
-          <ResponsiveContainer width="100%" height={360}>
+    <DownloadableChart fileName={titulo}>
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className={`${colorHeader} text-white text-xs px-3 py-2 font-medium`}>
+          {titulo}
+        </div>
+        <div className="p-2 overflow-x-auto">
+          <div style={{ minWidth: "520px" }}>
+            <ResponsiveContainer width="100%" height={360}>
             <ComposedChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis
@@ -93,9 +95,10 @@ export function GraficaPareto({ titulo, colorHeader, data }: Props) {
                 }}
               />
             </ComposedChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
-    </div>
+    </DownloadableChart>
   );
 }
