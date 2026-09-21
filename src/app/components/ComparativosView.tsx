@@ -1,6 +1,7 @@
 // src/components/ComparativosView.tsx
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
-import { Panel } from "./Panel"; 
+import { Panel } from "./Panel";
+import { fetchTableMulti, PERIODOS_ESTUDIANTES } from "../services/azureService";
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ||
@@ -181,7 +182,7 @@ export default function ComparativosView() {
   const [compRows, setCompRows] = useState<CompRow[]>([]);
   const [colab25, setColab25] = useState<ColabRow[]>([]);
   const [colab26, setColab26] = useState<ColabRow[]>([]);
-  const [ofertaRows, setOfertaRows] = useState<OfertaRow[]>([]); // ✅ DENTRO del componente
+  const [ofertaRows, setOfertaRows] = useState<OfertaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selCentros, setSelCentros] = useState<string[]>([]);
   const [selModalidades, setSelModalidades] = useState<string[]>([]);
@@ -195,9 +196,36 @@ export default function ComparativosView() {
         setLoading(true);
 
         // 1️⃣ Estudiantes
-        const resComp = await fetch(`${API_URL}/api/comparativos`);
-        if (!resComp.ok) throw new Error(`comparativos: ${resComp.status}`);
-        setCompRows(await resComp.json());
+        const { rows } = await fetchTableMulti({
+          years: ["2025", "2026"],
+          periodos: [...PERIODOS_ESTUDIANTES],
+          pageSize: 500000,
+        });
+
+        const grouped = new Map<string, CompRow>();
+        rows.forEach((row) => {
+          const value: CompRow = {
+            Año: Number(row.fecha),
+            Periodo: row.periodo || "",
+            Modalidad: row.categoria || "",
+            "Nivel Académico": row.nivelAcademico || "",
+            "Nivel de Formación": row.nivelFormacion || "",
+            "Centro Universitario": row.centro || "",
+            total: row.totales || 0,
+          };
+          const key = JSON.stringify([
+            value.Año,
+            value.Periodo,
+            value.Modalidad,
+            value["Nivel Académico"],
+            value["Nivel de Formación"],
+            value["Centro Universitario"],
+          ]);
+          const current = grouped.get(key);
+          if (current) current.total += value.total;
+          else grouped.set(key, value);
+        });
+        setCompRows([...grouped.values()]);
 
         // 2️⃣ Colaboradores
         try {
@@ -370,7 +398,7 @@ const ofertaAcademica = useMemo(() => {
   const colabTCTotal25 = colabTCRows.reduce((s, r) => s + r.v25, 0);
   const colabTCTotal26 = colabTCRows.reduce((s, r) => s + r.v26, 0);
 
-  // ── ESTUDIANTES TOTALES S2Q2 ───────────────
+  // ── ESTUDIANTES TOTALES S2Q3 ───────────────
   interface SubItem { label: string; v25: number; v26: number }
   interface NivelGroup { nivel: string; subniveles: SubItem[]; v25: number; v26: number }
 
@@ -510,7 +538,7 @@ const ofertaAcademica = useMemo(() => {
     {loading && <div className="text-center text-gray-400 py-2 text-xs">Cargando…</div>}
   </Panel>
 
-  <Panel title="ESTUDIANTES TOTALES – S2Q2" defaultOpen={false}>
+  <Panel title="ESTUDIANTES TOTALES – S2Q3" defaultOpen={false}>
     <table className="w-full text-xs border-collapse table-auto">
       <thead>
         <tr>
@@ -580,7 +608,7 @@ const ofertaAcademica = useMemo(() => {
           </div>
 
           <div className="border rounded-md bg-white p-3 text-center">
-            <div className="text-[10px] text-gray-500 mb-0.5">Estudiantes S2–Q2</div>
+            <div className="text-[10px] text-gray-500 mb-0.5">Estudiantes S2–Q3</div>
             <div className="text-3xl font-bold text-slate-800">{loading ? "…" : f(totalEst26)}</div>
           </div>
 
@@ -638,7 +666,7 @@ const ofertaAcademica = useMemo(() => {
             </Panel>
 
           {/* Estudiantes Modalidad */}
-  <Panel title="ESTUDIANTES MODALIDAD – S2Q2" defaultOpen={false}>
+  <Panel title="ESTUDIANTES MODALIDAD – S2Q3" defaultOpen={false}>
     <table className="w-full text-xs border-collapse table-auto">
               <thead>
                 <tr>

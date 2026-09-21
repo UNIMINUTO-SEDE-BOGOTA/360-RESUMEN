@@ -47,6 +47,8 @@ const API_URL =
 
 const TABLE = encodeURIComponent('Poblacion_Estudiantil2');
 
+export const PERIODOS_ESTUDIANTES = ['Q3', 'S2'] as const;
+
 // ==================== HELPERS ====================
 
 const toCsv = (arr?: string[]): string | undefined =>
@@ -168,7 +170,7 @@ export async function fetchTableMulti(
 
   const periodosEfectivos: string[] = f.periodos?.length
   ? f.periodos
-  : ['Q2', 'S2'];
+  : [...PERIODOS_ESTUDIANTES];
 
   if (periodosEfectivos.length) {
     rows = rows.filter(r =>

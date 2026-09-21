@@ -7,6 +7,7 @@ import { virtual2026S1Data } from "./data/virtual2026S1Data";
 import {
   fetchAzureData,
   fetchTableMulti,
+  PERIODOS_ESTUDIANTES,
   FiltersMulti as F
 } from "./services/azureService";
 import {
@@ -181,7 +182,7 @@ function App() {
     sufijoPeriodos: []
   });
 
-  const fechaCorte = "24 de Agosto del 2026";
+  const fechaCorte = "17 de Septiembre del 2026";
 
   const [activeTab, setActiveTab] = useState("estudiantes");
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
@@ -191,7 +192,7 @@ function App() {
   const [dashYears, setDashYears] = useState<string[]>([]);
   const [dashModalidades, setDashModalidades] = useState<string[]>([]);
   const [dashNiveles, setDashNiveles] = useState<string[]>([]);
-  const [dashPeriodos, setDashPeriodos] = useState<string[]>(["Q2", "S2"]);
+  const [dashPeriodos, setDashPeriodos] = useState<string[]>([...PERIODOS_ESTUDIANTES]);
   const [dashCentros, setDashCentros] = useState<string[]>([]);
   
   // PARETO EJECUTADO
@@ -888,7 +889,7 @@ const clearDash = () => {
   setDashYears([base.years[0] ?? "2026"]);
   setDashModalidades([]);
   setDashNiveles([]);
-  setDashPeriodos(["Q2", "S2"]);
+  setDashPeriodos([...PERIODOS_ESTUDIANTES]);
   setDashCentros([]);
 };
 
