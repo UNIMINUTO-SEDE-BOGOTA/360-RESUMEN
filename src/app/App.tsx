@@ -22,6 +22,7 @@ import { InvestigacionView } from "./components/InvestigacionView";
 import { ParetoTablas } from "./components/ParetoTablas";
 import { GraficaPareto } from "./components/GraficaPareto";
 import { Panel } from "./components/Panel";
+import { MarqueeBanner } from "./components/MarqueeBanner";
 
 // API del backend
 const API_URL =
@@ -68,6 +69,29 @@ interface ParetoItem {
 }
 
 // ==================== CONSTANTES ====================
+
+const CONFIG_SECCIONES: Record<string, { titulo?: string; fechaCorte: string }> = {
+  estudiantes: {
+    titulo: "Sistema Integrado de Información",
+    fechaCorte: "17 de Septiembre del 2026",
+  },
+  colaboradores: {
+    titulo: "Sistema Integrado de Información · Colaboradores",
+    fechaCorte: "23 de Septiembre del 2026",
+  },
+  comparativos: {
+    titulo: "Sistema Integrado de Información · Comparativos",
+    fechaCorte: "23 de Septiembre del 2026",
+  },
+  oferta: {
+    titulo: "Sistema Integrado de Información · Oferta Académica",
+    fechaCorte: "17 de Septiembre del 2026",
+  },
+  investigacion: {
+    titulo: "Sistema Integrado de Información · Investigación",
+    fechaCorte: "17 de Septiembre del 2026",
+  },
+};
 
 const ORDEN_CENTROS = [
   "Especial Minuto de Dios - Engativá",
@@ -182,9 +206,13 @@ function App() {
     sufijoPeriodos: []
   });
 
-  const fechaCorte = "17 de Septiembre del 2026";
-
   const [activeTab, setActiveTab] = useState("estudiantes");
+
+  const seccionActual = CONFIG_SECCIONES[activeTab] || {
+    titulo: "Sistema Integrado de Información",
+    fechaCorte: "17 de Septiembre del 2026",
+  };
+  const fechaCorte = seccionActual.fechaCorte;
   const [subViewEstudiantes, setSubViewEstudiantes] = useState<"dashboard" | "pareto">("dashboard");
   const [subViewPareto, setSubViewPareto] = useState<"ejecutado" | "proyectado">("ejecutado");
 
@@ -1026,25 +1054,10 @@ const clearProj = () => {
       </header>
 
       {/* MARQUEE */}
-      <div className="sticky top-[56px] sm:top-[80px] z-40 bg-slate-900 text-white text-xs overflow-hidden border-y">
-        <div className="overflow-hidden">
-          <div
-            className="flex whitespace-nowrap"
-            style={{ animation: "marquee 30s linear infinite", width: "max-content" }}
-          >
-            {[...Array(6)].map((_, i) => (
-              <span key={i} className="px-6">
-                Sistema Integrado de Información · Corte: {fechaCorte}
-              </span>
-            ))}
-            {[...Array(6)].map((_, i) => (
-              <span key={`d-${i}`} className="px-6">
-                Sistema Integrado de Información · Corte: {fechaCorte}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <MarqueeBanner
+        titulo={seccionActual.titulo}
+        fechaCorte={seccionActual.fechaCorte}
+      />
 
       {/* MAIN */}
       <main className="flex-1 px-3 py-3">
@@ -1238,7 +1251,7 @@ const clearProj = () => {
               )}
 
               {/* OTROS TABS */}
-              {activeTab === "colaboradores" && <ColaboradoresView />}
+              {activeTab === "colaboradores" && <ColaboradoresView fechaCorte={fechaCorte} />}
               {activeTab === "comparativos" && <ComparativosView />}
               {activeTab === "oferta" && <OfertaView fechaCorte={fechaCorte} />}
               {activeTab === "investigacion" && <InvestigacionView />}

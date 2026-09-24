@@ -228,6 +228,9 @@ export default function ColaboradoresView() {
       if (!esc) return; // 👈 ignorar “sin clasificar”
       map[esc] = (map[esc] || 0) + (r.total || 0);
     });
+    return ESCALAFON_ORDER
+      .filter(e => map[e])
+      .map(e => ({ name: e, valor: map[e] }));
     return ESCALAFON_ORDER.map(e => ({
       name: e,
       valor: map[e] || 0,
@@ -372,32 +375,32 @@ return (
       <DownloadableChart fileName="Colaboradores por dedicación">
         <div className="p-2 h-52">
           <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={dedicacionData}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
+            <BarChart data={dedicacionData}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip />
 
-            <Bar dataKey="total">
-              {dedicacionData.map((item, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORES_DEDICACION[index % COLORES_DEDICACION.length]}
+              <Bar dataKey="total">
+                {dedicacionData.map((item, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORES_DEDICACION[index % COLORES_DEDICACION.length]}
+                  />
+                ))}
+
+                <LabelList
+                  dataKey="total"
+                  position="top"
+                  style={{
+                    fontSize: 12,
+                    fill: "#1e293b",
+                    fontWeight: 600,
+                  }}
+                  formatter={(v: number) => (v > 0 ? v : "")}
                 />
-              ))}
-
-              <LabelList
-                dataKey="total"
-                position="top"
-                style={{
-                  fontSize: 12,
-                  fill: "#1e293b",
-                  fontWeight: 600,
-                }}
-                formatter={(v: number) => (v > 0 ? v : "")}
-              />
-            </Bar>
-          </BarChart>
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </DownloadableChart>
@@ -413,34 +416,34 @@ return (
       <DownloadableChart fileName="Escalafón docente">
         <div className="p-2 h-56">
           <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={escalafonData} margin={{ top: 35, right: 10, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis
-              dataKey="name"
-              interval={0}
-              angle={-30}
-              textAnchor="end"
-              height={55}
-              tick={{ fontSize: 11 }}
-            />
-            <YAxis tick={{ fontSize: 13 }} />
-            <Tooltip />
-            <Bar dataKey="valor">
-              {escalafonData.map((_, i) => (
-                <Cell key={i} fill={ESCALAFON_COLORS[i % ESCALAFON_COLORS.length]} />
-              ))}
-              <LabelList
-                dataKey="valor"
-                position="top"
-                style={{
-                  fontSize: 12,
-                  fill: "#1e293b",
-                  fontWeight: 600,
-                }}
-                formatter={(v: number) => (v > 0 ? v : "")}
-              />            
-            </Bar>
-          </BarChart>
+            <BarChart data={escalafonData} margin={{ top: 35, right: 10, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis
+                dataKey="name"
+                interval={0}
+                angle={-30}
+                textAnchor="end"
+                height={55}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis tick={{ fontSize: 13 }} />
+              <Tooltip />
+              <Bar dataKey="valor">
+                {escalafonData.map((_, i) => (
+                  <Cell key={i} fill={ESCALAFON_COLORS[i % ESCALAFON_COLORS.length]} />
+                ))}
+                <LabelList
+                  dataKey="valor"
+                  position="top"
+                  style={{
+                    fontSize: 12,
+                    fill: "#1e293b",
+                    fontWeight: 600,
+                  }}
+                  formatter={(v: number) => (v > 0 ? v : "")}
+                />            
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </DownloadableChart>
@@ -451,30 +454,30 @@ return (
       <DownloadableChart fileName="Tipo de contrato">
         <div className="p-2 h-56">
           <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={contratoData}
-              dataKey="value"
-              outerRadius={60}
-              label={({ pct, cx, cy, midAngle, outerRadius }) => {
-                const RADIAN = Math.PI / 180;
-                const radius = outerRadius + 20;
-                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                return (
-                  <text x={x} y={y} fill="#334155" textAnchor="middle" dominantBaseline="central" fontSize={9}>
-                    {pct}
-                  </text>
-                );
-              }}
-            >
-              {contratoData.map((_, i) => (
-                <Cell key={i} fill={CONTRATO_COLORS[i % CONTRATO_COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+            <PieChart>
+              <Pie
+                data={contratoData}
+                dataKey="value"
+                outerRadius={60}
+                label={({ pct, cx, cy, midAngle, outerRadius }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = outerRadius + 20;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  return (
+                    <text x={x} y={y} fill="#334155" textAnchor="middle" dominantBaseline="central" fontSize={9}>
+                      {pct}
+                    </text>
+                  );
+                }}
+              >
+                {contratoData.map((_, i) => (
+                  <Cell key={i} fill={CONTRATO_COLORS[i % CONTRATO_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
           </ResponsiveContainer>
         </div>
       </DownloadableChart>
