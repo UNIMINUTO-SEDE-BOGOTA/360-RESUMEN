@@ -12,6 +12,23 @@ API backend para conectar la aplicación React con Azure SQL Database.
 
 ## 🚀 Instalación
 
+## Actualizacion de la cache compartida
+
+La actualizacion de Azure SQL a Upstash se ejecuta manualmente mediante el
+workflow `Actualizar cache Redis` de GitHub Actions. No depende de que Render o
+Vercel esten disponibles.
+
+El comando que utiliza el workflow es:
+
+```bash
+npm run warmup:cache
+```
+
+Requiere las variables de Azure SQL y `UPSTASH_REDIS_REST_URL` /
+`UPSTASH_REDIS_REST_TOKEN`. En GitHub deben configurarse como Actions Secrets.
+Si Azure SQL restringe direcciones IP, debe permitirse la conexion del runner
+de GitHub antes de ejecutar el workflow.
+
 ### Paso 1: Instalar Node.js (si no lo tienes)
 Descarga e instala Node.js desde: https://nodejs.org/ (versión LTS recomendada)
 

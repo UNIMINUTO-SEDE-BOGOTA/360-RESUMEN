@@ -34,6 +34,11 @@ if (redisUrl.startsWith('https://') && redisToken && !redisUrl.includes('tu-url'
 // Cache en memoria (capa rápida sobre Redis o standalone)
 const memCache = new Map();
 const MEM_TTL = 1000 * 60 * 60 * 24 * 30;
+const CACHE_VERSION_CHECK_MS = 30 * 1000;
+let cacheVersion;
+let cacheVersionInitialized = false;
+let lastCacheVersionCheck = 0;
+let cacheVersionCheckPromise = null;
 
 function getMemCache(key) {
   const item = memCache.get(key);
@@ -46,7 +51,33 @@ function setMemCache(key, data) {
   memCache.set(key, { data, ts: Date.now() });
 }
 
+async function syncCacheVersion() {
+  if (!redis) return;
+  if (cacheVersionCheckPromise) return cacheVersionCheckPromise;
+  if (Date.now() - lastCacheVersionCheck < CACHE_VERSION_CHECK_MS) return;
+  lastCacheVersionCheck = Date.now();
+
+  cacheVersionCheckPromise = (async () => {
+    try {
+      const remoteVersion = await redis.get('cache:version');
+      if (cacheVersionInitialized && remoteVersion !== cacheVersion) {
+        memCache.clear();
+        console.log(`🔄 Cache local invalidado por version ${remoteVersion}`);
+      }
+      cacheVersion = remoteVersion;
+      cacheVersionInitialized = true;
+    } catch (err) {
+      console.warn('⚠️ No se pudo verificar la version de cache:', err.message);
+    } finally {
+      cacheVersionCheckPromise = null;
+    }
+  })();
+
+  return cacheVersionCheckPromise;
+}
+
 async function getCache(key) {
+  await syncCacheVersion();
   const mem = getMemCache(key);
   if (mem !== null) return mem;
   if (!redis) return null;
@@ -391,9 +422,11 @@ await Promise.all(years.map(async (year) => {
 // ==================== ENDPOINTS ====================
 
 // ── Cache: limpiar ──────────────────────────────────────────────────────────
-app.post('/api/cache/clear', async (_req, res) => {
-  await clearAllCache();
-  res.json({ message: 'Cache limpiado', entries: 0 });
+app.post('/api/cache/clear', (_req, res) => {
+  res.status(410).json({
+    errorCode: 'MOVED_TO_GITHUB_ACTIONS',
+    message: 'La cache compartida se administra mediante el workflow de GitHub Actions.',
+  });
 });
 
 // ── Cache: info ─────────────────────────────────────────────────────────────
@@ -407,40 +440,28 @@ app.get('/api/cache/info', async (_req, res) => {
 });
 
 // ── Cache: warmup status ────────────────────────────────────────────────────
-app.get('/api/cache/warmup-status', (_req, res) => {
-  res.json({ done: warmupDone, entries: memCache.size });
+app.get('/api/cache/warmup-status', async (_req, res) => {
+  try {
+    const status = redis ? await redis.get('warmup:status') : null;
+    if (status && typeof status === 'object') {
+      return res.json({
+        ...status,
+        done: status.status === 'completed',
+        entries: memCache.size,
+      });
+    }
+  } catch (err) {
+    console.warn('⚠️ No se pudo leer warmup:status:', err.message);
+  }
+  return res.json({ done: warmupDone, entries: memCache.size, status: 'unknown' });
 });
 
 // ── Cache: warmup (ÚNICO punto que activa Azure) ────────────────────────────
-app.post('/api/cache/warmup', async (req, res) => {
-  const adminKey = (req.headers['x-admin-key'] || '').toString().trim().replace(/^"|"$/g, '');
-  const secretKey = (process.env.ADMIN_SECRET_KEY || 'Herta').toString().trim().replace(/^"|"$/g, '');
-  if (adminKey !== secretKey) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-
-  res.json({ message: 'Warmup iniciado...', entries: memCache.size });
-
-  try {
-    ALLOW_DB = true;
-    await connectDB();
-    await clearAllCache();
-    if (redis) await redis.del('cache:ready');
-    memCache.delete('cache:ready');
-    warmupDone = false;
-
-    const ok = await warmupCacheDirect();
-    warmupDone = ok;
-  } catch (err) {
-    console.error('❌ Error en warmup:', getErrorMessage(err));
-  } finally {
-    try { if (pool) { await pool.close(); console.log('🔌 Pool cerrado'); } } catch (e) {
-      console.warn('⚠️ Error cerrando pool:', e.message);
-    }
-    dbConnected = false;
-    ALLOW_DB    = false;
-    console.log('✅ Azure SQL apagado después del warmup');
-  }
+app.post('/api/cache/warmup', (_req, res) => {
+  res.status(410).json({
+    errorCode: 'MOVED_TO_GITHUB_ACTIONS',
+    message: 'Ejecute el workflow "Actualizar cache Redis" en GitHub Actions.',
+  });
 });
 
 // ── Health ──────────────────────────────────────────────────────────────────

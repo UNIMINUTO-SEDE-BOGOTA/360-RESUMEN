@@ -1,0 +1,49 @@
+name: Actualizar cache Redis
+
+on:
+  workflow_dispatch:
+    inputs:
+      motivo:
+        description: Motivo de la actualizacion (opcional)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warmup-cache-production
+  cancel-in-progress: false
+
+jobs:
+  warmup:
+    name: Azure SQL a Upstash Redis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Actualizar cache compartida
+        working-directory: backend
+        run: npm run warmup:cache
+        env:
+          AZURE_SQL_SERVER: ${{ secrets.AZURE_SQL_SERVER }}
+          AZURE_SQL_DATABASE: ${{ secrets.AZURE_SQL_DATABASE }}
+          AZURE_SQL_USER: ${{ secrets.AZURE_SQL_USER }}
+          AZURE_SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          WARMUP_REASON: ${{ inputs.motivo }}

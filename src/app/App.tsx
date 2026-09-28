@@ -23,11 +23,10 @@ import { ParetoTablas } from "./components/ParetoTablas";
 import { GraficaPareto } from "./components/GraficaPareto";
 import { Panel } from "./components/Panel";
 import { MarqueeBanner } from "./components/MarqueeBanner";
-import {
-  apiGetJson,
-  primaryApiFetch,
-  primaryApiGetJson,
-} from "./services/apiClient";
+import { apiGetJson } from "./services/apiClient";
+
+const CACHE_WARMUP_WORKFLOW_URL =
+  "https://github.com/UNIMINUTO-SEDE-BOGOTA/360-RESUMEN/actions/workflows/warmup-cache.yml";
 
 // ==================== INTERFACES ====================
 
@@ -170,27 +169,6 @@ const getFacSigla = (fac?: string): string | null => {
 
 function App() {
 
-    // Estado de autenticación admin
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [adminInput, setAdminInput] = useState('');
-  const [loginError, setLoginError] = useState('');
-  
-  const ADMIN_KEY = (import.meta.env.VITE_ADMIN_KEY || 'Herta').toString().trim().replace(/^"|"$/g, '');
-  
-  // Login admin
-  const handleAdminLogin = () => {
-    const inputClean = adminInput.trim().replace(/^"|"$/g, '');
-    if (inputClean && (inputClean === ADMIN_KEY || inputClean === 'Herta')) {
-      setIsAdmin(true);
-      setShowLoginModal(false);
-      setLoginError('');
-      setAdminInput('');
-    } else {
-      setLoginError('Clave incorrecta');
-    }
-  };
-
   const [base, setBase] = useState<BaseOptions>({
     years: [],
     modalidades: [],
@@ -327,8 +305,7 @@ useEffect(() => {
     console.log("🔍 fetchAzureData resultado:", all?.length, all?.[0]);
 
  
-    // Si no hay datos aún (Redis vacío), no hacer nada —
-    // el usuario debe pulsar "Actualizar"
+    // Si no hay datos aun, el workflow manual debe cargar Redis.
     if (!all || all.length === 0) return;
  
     const periodicidades = [...new Set(
@@ -801,117 +778,6 @@ const buildPareto = (data: any[]) => {
     }
   };
 
-const forceRefresh = async () => {
-  setIsLoading(true);
-  setErr(null);
- 
-  try {
-    // 1. Lanza warmup en backend (conecta Azure y recarga Redis)
-    const warmupResponse = await primaryApiFetch('/api/cache/warmup', { method: 'POST', headers: {
-       'x-admin-key': ADMIN_KEY  // solo admin tiene esta clave
-    }
-    });
-    if (!warmupResponse.ok) {
-      throw new Error(`No fue posible iniciar el warmup (HTTP ${warmupResponse.status})`);
-    }
- 
-    // 2. Polling hasta que el warmup termine (máx 60s)
-    const maxWait  = 60_000;
-    const interval = 2_000;
-    const start    = Date.now();
- 
-    await new Promise<void>((resolve) => {
-      const check = async () => {
-        try {
-          const { done, entries } = await primaryApiGetJson<{
-            done: boolean;
-            entries: number;
-          }>('/api/cache/warmup-status');
-          if ((done && entries > 0) || Date.now() - start > maxWait) {
-            resolve();
-          } else {
-            setTimeout(check, interval);
-          }
-        } catch {
-          resolve();
-        }
-      };
-      setTimeout(check, interval);
-    });
- 
-    // 3. Recargar combos con los datos frescos de Redis
-    const all = await fetchAzureData();
-    if (all && all.length > 0) {
-      const periodicidades = [...new Set(
-        all.map(d => (d.periodicidad ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
- 
-      const nivelesFormacion = [...new Set(
-        all.map(d => (d.nivelFormacion ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
- 
-      const facultades = [...new Set(
-        all.map(d => (d.facultad ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
- 
-      const periodosCombinados = [...new Set(
-        all
-          .map(d => (d.fecha && d.periodo) ? `${d.fecha}-${d.periodo}` : '')
-          .filter(Boolean)
-      )].sort((a, b) => b.localeCompare(a));
- 
-      const sedes = [...new Set(
-        all.map(d => (d.rectoria ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
- 
-      const programas = [...new Set(
-        all.map(d => (d.programa ?? d.siglasPrograma ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
- 
-      setListaProgramas(programas.map(p => ({ label: p, value: p })));
- 
-      const modalidades = [...new Set(
-        all.map(d => (d.categoria ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
- 
-      const niveles = [...new Set(
-        all.map(d => normalizeNivel(d.nivelAcademico))
-      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
- 
-      const centros = [...new Set(
-        all.map(d => (d.centro ?? '').toString().trim()).filter(Boolean)
-      )].sort((a, b) => {
-        const indexA = ORDEN_CENTROS.indexOf(a);
-        const indexB = ORDEN_CENTROS.indexOf(b);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return a.localeCompare(b, 'es', { sensitivity: 'base' });
-      });
- 
-      setBase(prev => ({
-        ...prev,
-        modalidades,
-        niveles,
-        periodos: periodosCombinados,
-        sufijoPeriodos: getSufijos(periodosCombinados),
-        centros,
-        periodicidades,
-        nivelesFormacion,
-        facultades,
-        sedes,
-      }));
-    }
- 
-    // 4. Recargar dashboard
-    await loadDashboard();
- 
-  } catch (e: any) {
-    setErr(e.message || 'Error al actualizar');
-    setIsLoading(false);
-  }
-};
-
   // ==================== ACCIONES ====================
   
   // ── CAMBIO: limpiar cada conjunto por separado ──
@@ -972,23 +838,16 @@ const clearProj = () => {
         {/* ACCIONES */}
         <div className="flex gap-2">
           
-{/* Botón Actualizar — solo admin */}
-{isAdmin ? (
-  <button
-    onClick={forceRefresh}
+  <a
+    href={CACHE_WARMUP_WORKFLOW_URL}
+    target="_blank"
+    rel="noopener noreferrer"
+    title="Abrir la actualizacion manual en GitHub Actions"
     className="bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 text-xs font-medium hover:bg-blue-700"
   >
     <RefreshCw size={15} />
-    Actualizar
-  </button>
-) : (
-  <button
-    onClick={() => setShowLoginModal(true)}
-    className="bg-gray-200 text-gray-500 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-300"
-  >
-    🔒 Admin
-  </button>
-)}
+    Actualizar datos
+  </a>
            {/* ✅ BOTÓN 360 — agregar aquí */}
   <button
     onClick={() => window.open(
@@ -999,39 +858,6 @@ const clearProj = () => {
   >
     <Gauge size={15} /> 360
   </button>
-
-
-{/* Modal login admin */}
-{showLoginModal && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl p-6 w-80 flex flex-col gap-4 shadow-xl">
-      <h2 className="font-bold text-gray-800">Acceso Administrador</h2>
-      <input
-        type="password"
-        placeholder="Clave de administrador"
-        value={adminInput}
-        onChange={e => setAdminInput(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
-        className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      {loginError && <p className="text-red-500 text-xs">{loginError}</p>}
-      <div className="flex gap-2 justify-end">
-        <button
-          onClick={() => { setShowLoginModal(false); setAdminInput(''); setLoginError(''); }}
-          className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={handleAdminLogin}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          Entrar
-        </button>
-      </div>
-    </div>
-  </div>
-)}
         </div>
 
         {/* TABS — scroll horizontal en móvil, sin wrap */}

@@ -167,19 +167,6 @@ export async function apiGetJson<T>(path: string): Promise<T> {
   return tryPrimaryThenFallback<T>(path, true);
 }
 
-/** Peticiones con efectos: siempre van al principal y nunca se duplican. */
-export function primaryApiFetch(
-  path: string,
-  init: RequestInit = {}
-): Promise<Response> {
-  return fetchWithTimeout(PRIMARY_API_URL, path, init, FALLBACK_TIMEOUT_MS);
-}
-
-/** Lecturas administrativas ligadas explicitamente al servidor principal. */
-export async function primaryApiGetJson<T>(path: string): Promise<T> {
-  return getJsonFrom<T>(PRIMARY_API_URL, path);
-}
-
 export function getCircuitState(): CircuitState {
   return circuitState;
 }
