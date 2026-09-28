@@ -71,7 +71,7 @@ interface ParetoItem {
 const CONFIG_SECCIONES: Record<string, { titulo?: string; fechaCorte: string }> = {
   estudiantes: {
     titulo: "Sistema Integrado de Información",
-    fechaCorte: "17 de Septiembre del 2026",
+    fechaCorte: "21 de Septiembre del 2026",
   },
   colaboradores: {
     titulo: "Sistema Integrado de Información · Colaboradores",
