@@ -104,7 +104,7 @@ GET /api/datos/agregados`}
 
 
         <CodeBlock
-          code={`fetch('https://three60-resumen.onrender.com/api/datos/Poblacion_Estudiantil')`}
+          code={`apiGetJson('/api/datos/Poblacion_Estudiantil')`}
         />
 
         </div>

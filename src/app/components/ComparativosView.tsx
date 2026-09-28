@@ -2,10 +2,7 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { Panel } from "./Panel";
 import { fetchTableMulti, PERIODOS_ESTUDIANTES } from "../services/azureService";
-
-const API_URL =
-  (import.meta as any).env?.VITE_API_URL ||
-  "https://three60-resumen.onrender.com";
+import { apiGetJson } from "../services/apiClient";
 
 const f = (v: number) => v.toLocaleString("es-CO");
 
@@ -229,11 +226,10 @@ export default function ComparativosView() {
 
         // 2️⃣ Colaboradores
         try {
-          const [resC25, resC26] = await Promise.all([
-            fetch(`${API_URL}/api/colaboradores?periodo=2025-2`),
-            fetch(`${API_URL}/api/colaboradores?periodo=2026-2`),
+          const [c25, c26] = await Promise.all([
+            apiGetJson<ColabRow[]>("/api/colaboradores?periodo=2025-2"),
+            apiGetJson<ColabRow[]>("/api/colaboradores?periodo=2026-2"),
           ]);
-          const [c25, c26] = await Promise.all([resC25.json(), resC26.json()]);
           setColab25(Array.isArray(c25) ? c25 : []);
           setColab26(Array.isArray(c26) ? c26 : []);
         } catch (e) {
@@ -242,8 +238,7 @@ export default function ComparativosView() {
 
         // 3️⃣ Oferta Activa
         try {
-          const resOferta = await fetch(`${API_URL}/api/oferta-activa`);
-          const dataOferta = await resOferta.json();
+          const dataOferta = await apiGetJson<OfertaRow[]>("/api/oferta-activa");
           setOfertaRows(Array.isArray(dataOferta) ? dataOferta : []);
         } catch (e) {
           console.error("Error oferta-activa:", e);

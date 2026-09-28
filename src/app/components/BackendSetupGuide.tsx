@@ -7,15 +7,13 @@ import {
   ExternalLink,
   AlertCircle,
 } from "lucide-react";
+import {
+  apiGetJson,
+  PRIMARY_API_URL,
+} from "../services/apiClient";
 
 export function BackendSetupGuide() {
 
-  const API_URL =
-  (typeof import.meta !== "undefined" &&
-    (import.meta as any).env &&
-    (import.meta as any).env.VITE_API_URL) ||
-  "https://three60-resumen.onrender.com";
-  
   const [copied, setCopied] = useState<string | null>(null);
   const [status, setStatus] = useState<
     "checking" | "connected" | "disconnected"
@@ -33,13 +31,11 @@ export function BackendSetupGuide() {
   const check = async () => {
     setStatus("checking");
     try {
-      const res = await fetch(`${API_URL}/api/health`);
-      if (!res.ok) throw new Error();
+      await apiGetJson("/api/health");
 
       setStatus("connected");
 
-      const t = await fetch(`${API_URL}/api/tablas`);
-      const json = await t.json();
+      const json = await apiGetJson<any[]>("/api/tablas");
       setTables(json.map((x: any) => x.TABLE_NAME));
     } catch {
       setStatus("disconnected");
@@ -171,7 +167,7 @@ PORT=3001`}
           <h3 className="font-semibold text-gray-700">Endpoints</h3>
 
           <a
-            href={`${API_URL}/api/health`}
+            href={`${PRIMARY_API_URL}/api/health`}
             target="_blank"
             className="flex items-center gap-1 text-blue-600"
           >
@@ -180,7 +176,7 @@ PORT=3001`}
           </a>
 
           <a
-            href={`${API_URL}/api/tablas`}
+            href={`${PRIMARY_API_URL}/api/tablas`}
             target="_blank"
             className="flex items-center gap-1 text-blue-600"
           >

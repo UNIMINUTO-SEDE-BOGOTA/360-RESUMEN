@@ -5,10 +5,7 @@ import {
 } from "recharts";
 import { DownloadableChart } from "./DownloadableChart";
 import { DropdownMulti } from "./FiltersMulti";
-
-const API_URL =
-  (import.meta as any).env?.VITE_API_URL ||
-  "https://three60-resumen.onrender.com";
+import { apiGetJson } from "../services/apiClient";
 
 interface Programa {
   facultad: string;
@@ -112,8 +109,7 @@ export function OfertaView({ fechaCorte = "20 de febrero de 2026" }: Props) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`${API_URL}/api/oferta-activa`)
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    apiGetJson<Programa[]>("/api/oferta-activa")
       .then((rows: Programa[]) => {
           console.log("🔍 oferta raw:", rows?.length, rows?.[0]);
 

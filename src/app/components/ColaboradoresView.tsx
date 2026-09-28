@@ -5,11 +5,8 @@ import {
 } from "recharts";
 import { DownloadableChart } from "./DownloadableChart";
 import { DropdownMulti } from "./FiltersMulti";
-import { Panel } from "./Panel"; 
-
-const API_URL =
-  (import.meta as any).env?.VITE_API_URL ||
-  "https://three60-resumen.onrender.com";
+import { Panel } from "./Panel";
+import { apiGetJson } from "../services/apiClient";
 
 
 // ─────────────────────────────────────────────
@@ -155,8 +152,7 @@ export default function ColaboradoresView() {
   // Fetch
   useEffect(() => {
     setLoading(true);
-    fetch(`${API_URL}/api/colaboradores?periodo=2026-2`)
-      .then(r => r.json())
+    apiGetJson<ColaboradorRow[]>("/api/colaboradores?periodo=2026-2")
       .then(d => {
         console.log("🔍 colaboradores raw:", d?.length, d?.[0]);
         setRows(Array.isArray(d) ? d : []);

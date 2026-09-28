@@ -23,13 +23,11 @@ import { ParetoTablas } from "./components/ParetoTablas";
 import { GraficaPareto } from "./components/GraficaPareto";
 import { Panel } from "./components/Panel";
 import { MarqueeBanner } from "./components/MarqueeBanner";
-
-// API del backend
-const API_URL =
-  (typeof import.meta !== "undefined" &&
-    (import.meta as any).env &&
-    (import.meta as any).env.VITE_API_URL) ||
-  "https://three60-resumen.onrender.com";
+import {
+  apiGetJson,
+  primaryApiFetch,
+  primaryApiGetJson,
+} from "./services/apiClient";
 
 // ==================== INTERFACES ====================
 
@@ -304,8 +302,7 @@ useEffect(() => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_URL}/api/filtros/years`);
-        const years = await res.json();
+        const years = await apiGetJson<string[]>("/api/filtros/years");
         setBase(prev => ({ ...prev, years }));
       } catch (e) {
         console.error("Error cargando años:", e);
@@ -810,10 +807,13 @@ const forceRefresh = async () => {
  
   try {
     // 1. Lanza warmup en backend (conecta Azure y recarga Redis)
-    await fetch(`${API_URL}/api/cache/warmup`, { method: 'POST', headers: {
+    const warmupResponse = await primaryApiFetch('/api/cache/warmup', { method: 'POST', headers: {
        'x-admin-key': ADMIN_KEY  // solo admin tiene esta clave
     }
     });
+    if (!warmupResponse.ok) {
+      throw new Error(`No fue posible iniciar el warmup (HTTP ${warmupResponse.status})`);
+    }
  
     // 2. Polling hasta que el warmup termine (máx 60s)
     const maxWait  = 60_000;
@@ -823,8 +823,10 @@ const forceRefresh = async () => {
     await new Promise<void>((resolve) => {
       const check = async () => {
         try {
-          const r = await fetch(`${API_URL}/api/cache/warmup-status`);
-          const { done, entries } = await r.json();
+          const { done, entries } = await primaryApiGetJson<{
+            done: boolean;
+            entries: number;
+          }>('/api/cache/warmup-status');
           if ((done && entries > 0) || Date.now() - start > maxWait) {
             resolve();
           } else {

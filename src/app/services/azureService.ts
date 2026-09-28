@@ -1,5 +1,7 @@
 // src/services/azureService.ts
 
+import { apiGetJson } from './apiClient';
+
 export interface DataItem {
   id: number;
   fecha: string;
@@ -38,12 +40,6 @@ export interface FiltersMulti {
   page?: number;
   pageSize?: number;
 }
-
-const API_URL =
-  (typeof import.meta !== 'undefined' &&
-    (import.meta as any).env &&
-    (import.meta as any).env.VITE_API_URL) ||
-  'https://three60-resumen.onrender.com';
 
 const TABLE = encodeURIComponent('Poblacion_Estudiantil2');
 
@@ -93,19 +89,12 @@ const normalizeNivel = (nivel: string): string => {
 };
 
 // ==================== FETCH SEGURO ====================
-// NUNCA lanza error ni reintenta — si no hay cache simplemente
-// devuelve vacío. Azure SQL solo se enciende desde el botón Actualizar.
+// No propaga errores: el cliente central intenta el respaldo y, si ambos
+// fallan o no hay cache, esta capa devuelve vacio.
 
-async function safeFetch(url: string): Promise<any[] | null> {
+async function safeFetch(path: string): Promise<any[] | null> {
   try {
-    const res = await fetch(url, { cache: 'no-store' });
-
-    // Sin cache y BD apagada → vacío silencioso, NO reintentar
-    if (res.status === 503) return null;
-
-    if (!res.ok) return null;
-
-    const payload = await res.json();
+    const payload = await apiGetJson<any>(path);
     return Array.isArray(payload) ? payload : (payload?.rows ?? []);
   } catch {
     return null;
@@ -117,8 +106,8 @@ async function safeFetch(url: string): Promise<any[] | null> {
 // NUNCA despierta Azure.
 
 export async function fetchAzureData(): Promise<DataItem[]> {
-  const url = `${API_URL}/api/datos/${TABLE}?years=2020,2021,2022,2023,2024,2025,2026&page=1&pageSize=500000&_ts=${Date.now()}`;
-  const raw = await safeFetch(url);
+  const path = `/api/datos/${TABLE}?years=2020,2021,2022,2023,2024,2025,2026&page=1&pageSize=500000&_ts=${Date.now()}`;
+  const raw = await safeFetch(path);
   if (!raw) return [];
   return raw.map(mapRow);
 }
@@ -137,8 +126,8 @@ export async function fetchTableMulti(
   qs.set('pageSize', String(f.pageSize ?? 20000));
   qs.set('_ts', String(Date.now()));
 
-  const url = `${API_URL}/api/datos/${TABLE}?${qs.toString()}`;
-  const raw = await safeFetch(url);
+  const path = `/api/datos/${TABLE}?${qs.toString()}`;
+  const raw = await safeFetch(path);
   if (!raw) return { total: 0, rows: [] };
 
   // Normalización
